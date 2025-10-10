@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>实时趋势 - Block Trade DT</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- 顶部导航栏 -->
+  <header class="main-header glassmorphism">
+    <div class="header-container">
+      <div class="header-left">
+        <div class="logo">
+          <span class="logo-icon">📊</span>
+          <span class="logo-text">Block Trade DT</span>
+        </div>
+        <nav class="main-nav">
+          <a href="/" class="nav-item">
+            <span class="nav-icon">🏠</span>
+            <span>首页</span>
+          </a>
+          <a href="/trends" class="nav-item active">
+            <span class="nav-icon">📈</span>
+            <span>实时趋势</span>
+          </a>
+          <a href="#" class="nav-item">
+            <span class="nav-icon">🔍</span>
+            <span>智能检索</span>
+          </a>
+        </nav>
+      </div>
+      <div class="header-right">
+        <div class="market-status">
+          <span class="status-dot online"></span>
+          <span class="status-text">实时更新</span>
+        </div>
+        <div class="user-profile" id="userProfile">
+          <div class="user-avatar">
+            <span>👤</span>
+          </div>
+          <span class="username">用户</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主要内容区域 -->
+  <main class="main-content">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <h1>实时趋势分析</h1>
+      <p>基于东方财富网的大宗交易市场实时数据</p>
+    </div>
+
+    <!-- 市场统计图表 -->
+    <section class="chart-section">
+      <div class="chart-container glassmorphism">
+        <div class="chart-header">
+          <h3>市场统计图</h3>
+          <div class="chart-controls">
+            <button class="time-btn active" data-period="1m">近1月</button>
+            <button class="time-btn" data-period="3m">近3月</button>
+            <button class="time-btn" data-period="6m">近6月</button>
+            <button class="time-btn" data-period="1y">近1年</button>
+          </div>
+        </div>
+        <div class="chart-content">
+          <canvas id="marketChart" width="800" height="400"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- 市场统计表格 -->
+    <section class="table-section">
+      <div class="table-container glassmorphism">
+        <div class="table-header">
+          <h3>市场统计表</h3>
+          <div class="table-actions">
+            <button class="export-btn">导出数据</button>
+            <button class="refresh-btn">刷新</button>
+          </div>
+        </div>
+        <div class="table-content">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>序号</th>
+                <th>交易日期</th>
+                <th>上证指数</th>
+                <th>涨跌幅(%)</th>
+                <th>大宗交易成交总额(万)</th>
+                <th>溢价成交总额(万)</th>
+                <th>溢价占比(%)</th>
+                <th>折价成交总额(万)</th>
+                <th>折价占比(%)</th>
+              </tr>
+            </thead>
+            <tbody id="marketTableBody">
+              <!-- 动态填充数据 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 实时数据面板 -->
+    <section class="realtime-panel">
+      <div class="panel-grid">
+        <div class="data-card glassmorphism">
+          <div class="card-header">
+            <h4>上证指数</h4>
+            <span class="update-time">实时</span>
+          </div>
+          <div class="card-content">
+            <div class="main-value" id="currentIndex">3,666.44</div>
+            <div class="change-value negative" id="currentChange">-0.46%</div>
+          </div>
+        </div>
+
+        <div class="data-card glassmorphism">
+          <div class="card-header">
+            <h4>总成交额</h4>
+            <span class="update-time">实时</span>
+          </div>
+          <div class="card-content">
+            <div class="main-value" id="totalVolume">62,034.99万</div>
+            <div class="change-value positive">+5.2%</div>
+          </div>
+        </div>
+
+        <div class="data-card glassmorphism">
+          <div class="card-header">
+            <h4>溢价成交</h4>
+            <span class="update-time">实时</span>
+          </div>
+          <div class="card-content">
+            <div class="main-value" id="premiumVolume">258.45万</div>
+            <div class="change-value positive">+12.3%</div>
+          </div>
+        </div>
+
+        <div class="data-card glassmorphism">
+          <div class="card-header">
+            <h4>折价成交</h4>
+            <span class="update-time">实时</span>
+          </div>
+          <div class="card-content">
+            <div class="main-value" id="discountVolume">60,163.73万</div>
+            <div class="change-value negative">-2.1%</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 登录模态框 -->
+  <div class="modal" id="loginModal" style="display: none;">
+    <div class="modal-content glassmorphism">
+      <div class="modal-header">
+        <h3>用户登录</h3>
+        <button class="close-btn" onclick="closeModal('loginModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="loginUsername">用户名</label>
+            <input type="text" id="loginUsername" required>
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">密码</label>
+            <input type="password" id="loginPassword" required>
+          </div>
+          <button type="submit" class="btn-primary">登录</button>
+        </form>
+        <p class="form-footer">
+          还没有账号？<a href="#" onclick="showModal('registerModal')">立即注册</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 注册模态框 -->
+  <div class="modal" id="registerModal" style="display: none;">
+    <div class="modal-content glassmorphism">
+      <div class="modal-header">
+        <h3>用户注册</h3>
+        <button class="close-btn" onclick="closeModal('registerModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="registerForm">
+          <div class="form-group">
+            <label for="registerUsername">用户名</label>
+            <input type="text" id="registerUsername" required>
+          </div>
+          <div class="form-group">
+            <label for="registerEmail">邮箱</label>
+            <input type="email" id="registerEmail" required>
+          </div>
+          <div class="form-group">
+            <label for="registerPassword">密码</label>
+            <input type="password" id="registerPassword" required>
+          </div>
+          <div class="form-group">
+            <label for="registerFullName">姓名</label>
+            <input type="text" id="registerFullName">
+          </div>
+          <button type="submit" class="btn-primary">注册</button>
+        </form>
+        <p class="form-footer">
+          已有账号？<a href="#" onclick="showModal('loginModal')">立即登录</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 全局变量
+    let marketChart;
+    let currentUser = null;
+    let accessToken = localStorage.getItem('accessToken');
+
+    // DOM元素
+    const userProfile = document.getElementById('userProfile');
+    const marketTableBody = document.getElementById('marketTableBody');
+
+    // 初始化页面
+    document.addEventListener('DOMContentLoaded', function() {
+      initMarketChart();
+      loadTrendsData();
+      checkAuthStatus();
+      
+      // 绑定事件
+      bindEvents();
+      
+      // 定时刷新数据
+      setInterval(loadTrendsData, 30000); // 每30秒刷新一次
+    });
+
+    // 绑定事件
+    function bindEvents() {
+      // 用户头像点击事件
+      userProfile.addEventListener('click', function() {
+        if (currentUser) {
+          showUserMenu();
+        } else {
+          showModal('loginModal');
+        }
+      });
+
+      // 登录表单提交
+      document.getElementById('loginForm').addEventListener('submit', handleLogin);
+      
+      // 注册表单提交
+      document.getElementById('registerForm').addEventListener('submit', handleRegister);
+
+      // 时间按钮切换
+      document.querySelectorAll('.time-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          loadTrendsData();
+        });
+      });
+    }
+
+    // 初始化市场图表
+    function initMarketChart() {
+      const ctx = document.getElementById('marketChart').getContext('2d');
+      
+      marketChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: '上证指数',
+              data: [],
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              borderWidth: 2,
+              fill: false,
+              yAxisID: 'y'
+            },
+            {
+              label: '大宗交易成交总额(万)',
+              data: [],
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              borderWidth: 2,
+              fill: false,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false,
+          },
+          scales: {
+            x: {
+              display: true,
+              title: {
+                display: true,
+                text: '日期'
+              }
+            },
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              title: {
+                display: true,
+                text: '上证指数'
+              }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              title: {
+                display: true,
+                text: '成交总额(万)'
+              },
+              grid: {
+                drawOnChartArea: false,
+              },
+            }
+          },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top'
+            }
+          }
+        }
+      });
+    }
+
+    // 加载趋势数据
+    async function loadTrendsData() {
+      try {
+        const response = await fetch('/api/trends/data');
+        const data = await response.json();
+        
+        updateChart(data);
+        updateTable(data);
+        updateRealtimeData(data);
+      } catch (error) {
+        console.error('加载趋势数据失败:', error);
+      }
+    }
+
+    // 更新图表
+    function updateChart(data) {
+      const labels = data.daily_stats.map(item => item.date);
+      const indexData = data.daily_stats.map(item => item.index);
+      const volumeData = data.daily_stats.map(item => item.total_volume);
+      
+      marketChart.data.labels = labels;
+      marketChart.data.datasets[0].data = indexData;
+      marketChart.data.datasets[1].data = volumeData;
+      marketChart.update();
+    }
+
+    // 更新表格
+    function updateTable(data) {
+      marketTableBody.innerHTML = '';
+      
+      data.daily_stats.forEach((item, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${index + 1}</td>
+          <td>${item.date}</td>
+          <td>${item.index.toFixed(2)}</td>
+          <td class="${item.change >= 0 ? 'positive' : 'negative'}">${item.change >= 0 ? '+' : ''}${item.change.toFixed(2)}%</td>
+          <td>${item.total_volume.toFixed(2)}</td>
+          <td>${item.premium_volume.toFixed(2)}</td>
+          <td>${item.premium_ratio.toFixed(2)}%</td>
+          <td>${item.discount_volume.toFixed(2)}</td>
+          <td>${item.discount_ratio.toFixed(2)}%</td>
+        `;
+        marketTableBody.appendChild(row);
+      });
+    }
+
+    // 更新实时数据
+    function updateRealtimeData(data) {
+      document.getElementById('currentIndex').textContent = data.market_data.shanghai_index.toFixed(2);
+      document.getElementById('currentChange').textContent = `${data.market_data.shanghai_change >= 0 ? '+' : ''}${data.market_data.shanghai_change.toFixed(2)}%`;
+      document.getElementById('totalVolume').textContent = `${data.market_data.total_volume.toFixed(2)}万`;
+      document.getElementById('premiumVolume').textContent = `${data.market_data.premium_volume.toFixed(2)}万`;
+      document.getElementById('discountVolume').textContent = `${data.market_data.discount_volume.toFixed(2)}万`;
+    }
+
+    // 检查认证状态
+    async function checkAuthStatus() {
+      if (accessToken) {
+        try {
+          const response = await fetch('/api/user/profile', {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
+          
+          if (response.ok) {
+            currentUser = await response.json();
+            updateUserDisplay();
+          } else {
+            localStorage.removeItem('accessToken');
+            accessToken = null;
+          }
+        } catch (error) {
+          console.error('检查认证状态失败:', error);
+        }
+      }
+    }
+
+    // 处理登录
+    async function handleLogin(event) {
+      event.preventDefault();
+      
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+      
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username, password })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          accessToken = data.access_token;
+          currentUser = data.user;
+          
+          localStorage.setItem('accessToken', accessToken);
+          updateUserDisplay();
+          closeModal('loginModal');
+          
+          // 清空表单
+          document.getElementById('loginForm').reset();
+        } else {
+          const error = await response.json();
+          alert(error.detail);
+        }
+      } catch (error) {
+        console.error('登录失败:', error);
+        alert('登录失败，请重试');
+      }
+    }
+
+    // 处理注册
+    async function handleRegister(event) {
+      event.preventDefault();
+      
+      const username = document.getElementById('registerUsername').value;
+      const email = document.getElementById('registerEmail').value;
+      const password = document.getElementById('registerPassword').value;
+      const fullName = document.getElementById('registerFullName').value;
+      
+      try {
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username, email, password, full_name: fullName })
+        });
+        
+        if (response.ok) {
+          alert('注册成功！请登录');
+          closeModal('registerModal');
+          showModal('loginModal');
+          
+          // 清空表单
+          document.getElementById('registerForm').reset();
+        } else {
+          const error = await response.json();
+          alert(error.detail);
+        }
+      } catch (error) {
+        console.error('注册失败:', error);
+        alert('注册失败，请重试');
+      }
+    }
+
+    // 更新用户显示
+    function updateUserDisplay() {
+      if (currentUser) {
+        userProfile.querySelector('.username').textContent = currentUser.username;
+        userProfile.querySelector('.user-avatar span').textContent = '👤';
+      } else {
+        userProfile.querySelector('.username').textContent = '用户';
+        userProfile.querySelector('.user-avatar span').textContent = '👤';
+      }
+    }
+
+    // 显示模态框
+    function showModal(modalId) {
+      document.getElementById(modalId).style.display = 'flex';
+    }
+
+    // 关闭模态框
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    // 显示用户菜单
+    function showUserMenu() {
+      if (confirm('是否要退出登录？')) {
+        currentUser = null;
+        accessToken = null;
+        localStorage.removeItem('accessToken');
+        updateUserDisplay();
+      }
+    }
+  </script>
+
+  <!-- 页脚 -->
+  <footer class="main-footer">
+    <div class="footer-container">
+      <div class="footer-content">
+        <div class="footer-title">
+          <h2>Block Trade DT</h2>
+        </div>
+        <div class="footer-description">
+          <p>专业的大宗交易数据平台，为您提供实时、准确的市场信息</p>
+          <p>基于智谱AI技术，智能分析市场趋势，助力投资决策</p>
+        </div>
+        <div class="footer-social">
+          <a href="https://www.douyin.com/user/MS4wLjABAAAAkBUw0RHPp3VqepZHs6YB8nzjlQygC3Lr4ZuRLkgvabE?enter_from=general_search&enter_method=general_search&extra_params=%7B%22search_params%22%3A%7B%22search_result_id%22%3A%2268425914449%22%2C%22relation_tag%22%3A0%2C%22log_pb%22%3A%7B%22impr_id%22%3A%222025081515391302E704D8456ADD5031FE%22%7D%2C%22search_type%22%3A%22general%22%2C%22impr_id%22%3A%222025081515391302E704D8456ADD5031FE%22%2C%22search_id%22%3A%222025081515391302E704D8456ADD5031FE%22%2C%22search_keyword%22%3A%22sanawo%22%2C%22token_type%22%3A%22discover_list%22%7D%7D&from_tab_name=main" target="_blank" class="social-link douyin">
+            <span class="social-icon">抖音</span>
+          </a>
+          <a href="https://weibo.com/u/6136590501" target="_blank" class="social-link weibo">
+            <span class="social-icon">微博</span>
+          </a>
+          <a href="#" class="social-link wechat">
+            <span class="social-icon">微信</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
