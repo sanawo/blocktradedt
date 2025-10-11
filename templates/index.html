@@ -718,12 +718,16 @@
 
     // 显示加载动画
     function showLoading() {
-      loadingOverlay.style.display = 'flex';
+      if (loadingOverlay) {
+        loadingOverlay.style.display = 'flex';
+      }
     }
 
     // 隐藏加载动画
     function hideLoading() {
-      loadingOverlay.style.display = 'none';
+      if (loadingOverlay) {
+        loadingOverlay.style.display = 'none';
+      }
     }
 
     // 渲染骨架屏
@@ -1000,6 +1004,8 @@
     // AI聊天功能
     function addMessageToChat(role, content, isLoading = false) {
       const chatMessages = document.getElementById('chatMessages');
+      if (!chatMessages) return null;
+      
       const messageDiv = document.createElement('div');
       messageDiv.className = `message ${role}`;
       
@@ -1048,14 +1054,18 @@
         const data = await response.json();
         
         // 移除加载消息
-        loadingMessage.remove();
+        if (loadingMessage && loadingMessage.parentNode) {
+          loadingMessage.parentNode.removeChild(loadingMessage);
+        }
         
         // 添加AI回复
         addMessageToChat('assistant', data.response);
         
       } catch (error) {
         console.error('AI聊天失败:', error);
-        loadingMessage.remove();
+        if (loadingMessage && loadingMessage.parentNode) {
+          loadingMessage.parentNode.removeChild(loadingMessage);
+        }
         addMessageToChat('assistant', '抱歉，AI服务暂时不可用，请稍后重试。');
       }
     }
