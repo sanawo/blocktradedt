@@ -24,8 +24,18 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # 创建数据库表
 Base.metadata.create_all(bind=engine)
 
-# 初始化智谱AI
-zhipu_ai = ZhipuAI(api_key=Config.get_zhipu_api_key())
+# 初始化智谱AI（延迟初始化以避免启动时错误）
+zhipu_ai = None
+
+def get_zhipu_ai():
+    global zhipu_ai
+    if zhipu_ai is None:
+        try:
+            zhipu_ai = ZhipuAI(api_key=Config.get_zhipu_api_key())
+        except Exception as e:
+            print(f"智谱AI初始化失败: {e}")
+            zhipu_ai = None
+    return zhipu_ai
 
 app = FastAPI(title="Block Trade DT", description="大宗交易数据检索平台")
 
@@ -230,7 +240,15 @@ async def chat_with_ai(chat_request: ChatRequest):
     """
     try:
         # 调用智谱AI
-        response = zhipu_ai.chat(
+        ai_client = get_zhipu_ai()
+        if ai_client is None:
+            return ChatResponse(
+                response="抱歉，AI服务暂时不可用",
+                timestamp=datetime.now().isoformat(),
+                success=False
+            )
+        
+        response = ai_client.chat(
             user_message=chat_request.message,
             system_prompt=chat_request.system_prompt,
             conversation_history=chat_request.conversation_history

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-启动脚本 - 用于调试和启动应用
+简化启动脚本 - 用于调试
 """
 import os
 import sys
@@ -8,7 +8,7 @@ import traceback
 
 def main():
     """主函数"""
-    print("🚀 启动 Block Trade DT 应用...")
+    print("🚀 启动 Block Trade DT 简化版应用...")
     
     try:
         # 打印环境信息
@@ -37,28 +37,21 @@ def main():
             print(f"  ❌ Uvicorn导入失败: {e}")
             return
         
+        # 导入简化应用
+        print("📱 导入简化应用...")
         try:
-            import sqlalchemy
-            print(f"  ✅ SQLAlchemy: {sqlalchemy.__version__}")
-        except ImportError as e:
-            print(f"  ❌ SQLAlchemy导入失败: {e}")
-            return
-        
-        # 导入应用
-        print("📱 导入应用...")
-        try:
-            from app.main import app
-            print("  ✅ 应用导入成功")
+            from app.simple_main import app
+            print("  ✅ 简化应用导入成功")
         except Exception as e:
-            print(f"  ❌ 应用导入失败: {e}")
+            print(f"  ❌ 简化应用导入失败: {e}")
             print(f"  详细错误: {traceback.format_exc()}")
             return
         
         # 启动应用
-        print("🌐 启动服务器...")
+        print("🌐 启动简化服务器...")
         import uvicorn
         uvicorn.run(
-            "app.main:app",
+            "app.simple_main:app",
             host=os.getenv("HOST", "0.0.0.0"),
             port=int(os.getenv("PORT", 8000)),
             reload=False,
