@@ -5,7 +5,7 @@ class Config:
     """应用配置类"""
     
     # 数据库配置 - 优先使用环境变量
-    DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./block_trade_dt.db')
+    DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///:memory:')
     
     # JWT配置
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'block-trade-dt-super-secret-key-2024')
