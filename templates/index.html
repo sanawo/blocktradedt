@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Block Trade DT - 大宗交易数据平台</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+</head>
+<body>
+  <!-- 粒子背景 -->
+  <div id="particles-js"></div>
+  
+  <!-- 顶部导航栏 -->
+  <header class="main-header glassmorphism">
+    <div class="header-container">
+      <div class="header-left">
+        <div class="logo">
+          <span class="logo-icon">📊</span>
+          <span class="logo-text">Block Trade DT</span>
+        </div>
+        <nav class="main-nav">
+          <a href="/" class="nav-item active">
+            <span class="nav-icon">🏠</span>
+            <span>首页</span>
+          </a>
+          <a href="/trends" class="nav-item">
+            <span class="nav-icon">📈</span>
+            <span>实时趋势</span>
+          </a>
+          <a href="#" class="nav-item">
+            <span class="nav-icon">🔍</span>
+            <span>智能检索</span>
+          </a>
+        </nav>
+      </div>
+      <div class="header-right">
+        <div class="market-status">
+          <span class="status-dot online"></span>
+          <span class="status-text">实时更新</span>
+        </div>
+        <div class="user-profile" id="userProfile">
+          <div class="user-avatar">
+            <span>👤</span>
+          </div>
+          <span class="username">用户</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主要内容区域 -->
+  <main class="main-content">
+    <!-- 东方财富数据面板 -->
+    <section class="eastmoney-data-panel">
+      <div class="data-container">
+        <div class="data-header">
+          <h2>东方财富网大宗交易数据</h2>
+          <p>实时更新的大宗交易信息，数据来源：<a href="https://data.eastmoney.com/dzjy/" target="_blank">东方财富网</a></p>
+        </div>
+        
+        <!-- 市场统计 -->
+        <div class="market-stats-grid">
+          <div class="stats-card glassmorphism">
+            <div class="card-header">
+              <h3>A股市场统计</h3>
+              <div class="update-time">更新时间: <span id="marketUpdateTime">2024-08-15 15:00</span></div>
+            </div>
+            <div class="stats-content">
+              <div class="stat-row">
+                <span class="stat-label">上证指数</span>
+                <span class="stat-value" id="shanghaiIndex">3,666.44</span>
+                <span class="stat-change negative" id="shanghaiChange">-0.46%</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">大宗交易成交总额</span>
+                <span class="stat-value" id="totalAmount">62,034.99</span>
+                <span class="stat-unit">万元</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">溢价成交总额</span>
+                <span class="stat-value" id="premiumAmount">258.45</span>
+                <span class="stat-unit">万元</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">折价成交总额</span>
+                <span class="stat-value" id="discountAmount">60,163.73</span>
+                <span class="stat-unit">万元</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="stats-card glassmorphism">
+            <div class="card-header">
+              <h3>每日明细统计</h3>
+              <div class="update-time">数据日期: <span id="detailDate">08月14日</span></div>
+            </div>
+            <div class="stats-content">
+              <div class="stat-row">
+                <span class="stat-label">成交笔数</span>
+                <span class="stat-value" id="tradeCount">156</span>
+                <span class="stat-unit">笔</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">成交总量</span>
+                <span class="stat-value" id="tradeVolume">1,250.5</span>
+                <span class="stat-unit">万股</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">成交总额</span>
+                <span class="stat-value" id="tradeAmount">45,678.9</span>
+                <span class="stat-unit">万元</span>
+              </div>
+              <div class="stat-row">
+                <span class="stat-label">平均折溢率</span>
+                <span class="stat-value" id="avgDiscount">-2.5</span>
+                <span class="stat-unit">%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 活跃股票统计 -->
+        <div class="active-stocks-panel">
+          <div class="panel-header">
+            <h3>活跃A股统计</h3>
+            <div class="time-filter">
+              <button class="filter-btn active" data-period="1m">近一月</button>
+              <button class="filter-btn" data-period="3m">近三月</button>
+              <button class="filter-btn" data-period="6m">近六月</button>
+              <button class="filter-btn" data-period="1y">近一年</button>
+            </div>
+          </div>
+          <div class="stocks-table" id="activeStocksTable">
+            <div class="table-header">
+              <div class="table-cell">证券代码</div>
+              <div class="table-cell">证券简称</div>
+              <div class="table-cell">最新价</div>
+              <div class="table-cell">涨跌幅</div>
+              <div class="table-cell">上榜次数</div>
+              <div class="table-cell">成交总额(万)</div>
+              <div class="table-cell">折溢率(%)</div>
+            </div>
+            <div class="table-body" id="stocksTableBody">
+              <!-- 动态填充数据 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 营业部统计 -->
+        <div class="broker-stats-panel">
+          <div class="panel-header">
+            <h3>活跃营业部统计</h3>
+            <div class="time-filter">
+              <button class="filter-btn active" data-period="1d">08月14日</button>
+              <button class="filter-btn" data-period="3d">近3日</button>
+              <button class="filter-btn" data-period="5d">近5日</button>
+              <button class="filter-btn" data-period="10d">近10日</button>
+            </div>
+          </div>
+          <div class="broker-table" id="brokerTable">
+            <div class="table-header">
+              <div class="table-cell">营业部名称</div>
+              <div class="table-cell">最近上榜日</div>
+              <div class="table-cell">次数统计</div>
+              <div class="table-cell">成交金额(万)</div>
+              <div class="table-cell">买入次数</div>
+              <div class="table-cell">卖出次数</div>
+            </div>
+            <div class="table-body" id="brokerTableBody">
+              <!-- 动态填充数据 -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 智能检索区域 -->
+    <section class="search-section">
+      <div class="search-container glassmorphism">
+        <div class="search-header">
+          <h1 class="search-title">AI智能大宗交易检索</h1>
+          <p class="search-subtitle">基于东方财富网数据，支持自然语言查询，AI深度分析交易数据</p>
+        </div>
+        <div class="search-bar-container">
+          <div class="search-input-wrapper">
+            <input id="query" class="search-input" type="text" placeholder="例如：查找2024年大宗交易数据，分析铜相关交易" />
+            <button id="search-btn" class="search-btn">
+              <span class="btn-icon">🚀</span>
+              <span>开始检索</span>
+            </button>
+          </div>
+          <div class="search-controls">
+            <div class="control-group">
+              <label class="control-label">
+                <span>检索数量</span>
+                <input id="topk" class="control-input" type="number" min="1" max="50" value="10" />
+          </label>
+              <label class="control-label">
+                <span>AI分析</span>
+          <label class="switch">
+                  <input id="use_llm" type="checkbox" checked />
+            <span class="slider"></span>
+                </label>
+          </label>
+            </div>
+          </div>
+        </div>
+        <div class="search-suggestions">
+          <span class="suggestion-chip" data-query="分析2024年大宗交易趋势">分析2024年大宗交易趋势</span>
+          <span class="suggestion-chip" data-query="查找股票大宗交易数据">查找股票大宗交易数据</span>
+          <span class="suggestion-chip" data-query="基金大宗交易分析">基金大宗交易分析</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 实时行情面板 -->
+    <section class="market-panel">
+      <div class="market-container">
+        <!-- 上证指数卡片 -->
+        <div class="market-card glassmorphism primary-card">
+          <div class="card-header">
+            <h3>上证指数</h3>
+            <div class="card-status online">实时</div>
+          </div>
+          <div class="index-display">
+            <div class="index-value" id="indexValue">3,666.44</div>
+            <div class="index-change negative" id="indexChange">-0.46%</div>
+            <div class="trend-indicator">
+              <span class="trend-tag">连跌2天</span>
+              <div class="trend-chart">
+                <canvas id="marketChart" width="200" height="60"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 关键指标网格 -->
+        <div class="metrics-grid">
+          <div class="metric-card glassmorphism">
+            <div class="metric-icon">💰</div>
+            <div class="metric-content">
+              <h4>总成交额</h4>
+              <div class="metric-value" data-value="45678900">4567.89亿</div>
+              <div class="metric-change positive">↑12.5%</div>
+            </div>
+          </div>
+          <div class="metric-card glassmorphism">
+            <div class="metric-icon">📈</div>
+            <div class="metric-content">
+              <h4>总成交量</h4>
+              <div class="metric-value" data-value="1234567">123.46亿</div>
+              <div class="metric-change negative">↓3.2%</div>
+            </div>
+          </div>
+          <div class="metric-card glassmorphism">
+            <div class="metric-icon">🏢</div>
+            <div class="metric-content">
+              <h4>活跃股票</h4>
+              <div class="metric-value" data-value="2847">2847只</div>
+              <div class="metric-change positive">↑15只</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- K线图分析区域 -->
+    <section class="chart-section">
+      <div class="chart-container glassmorphism">
+        <div class="chart-header">
+          <div class="chart-title">
+            <h3>大宗交易K线分析</h3>
+            <div class="chart-subtitle">基于东方财富网实时数据的大宗交易走势分析</div>
+          </div>
+          <div class="chart-controls">
+            <div class="time-controls">
+              <button class="time-btn active" data-period="1d">1日</button>
+              <button class="time-btn" data-period="1w">1周</button>
+              <button class="time-btn" data-period="1m">1月</button>
+              <button class="time-btn" data-period="3m">3月</button>
+            </div>
+            <button class="ai-analysis-btn">
+              <span class="ai-icon">🤖</span>
+              <span>AI解读</span>
+            </button>
+          </div>
+        </div>
+        <div class="chart-content">
+          <canvas id="klineChart" width="800" height="400"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- 搜索结果区域 -->
+    <section class="results-section" id="resultsSection" style="display: none;">
+      <div class="results-container glassmorphism">
+        <div class="results-header">
+          <div class="results-info">
+            <div id="result-count" class="result-count">共 0 条结果</div>
+            <div class="search-time">检索耗时: <span id="searchTime">0.0s</span></div>
+          </div>
+        </div>
+        <div id="summary" class="ai-summary"></div>
+        <div id="results" class="results-grid"></div>
+    </div>
+    </section>
+
+    <!-- AI聊天区域 -->
+    <section class="chat-section">
+      <div class="chat-container glassmorphism">
+        <div class="chat-header">
+          <div class="chat-title">
+            <h3>🤖 AI智能助手</h3>
+            <div class="chat-subtitle">基于智谱AI的专业金融分析助手</div>
+          </div>
+          <div class="chat-actions">
+            <button class="ai-analysis-btn" id="aiAnalysisBtn" onclick="getAIMarketAnalysis()">
+              <span>📊</span>
+              <span>市场分析</span>
+            </button>
+            <button class="clear-chat-btn" onclick="clearChat()">
+              <span>🗑️</span>
+              <span>清空</span>
+            </button>
+          </div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+          <div class="message assistant">
+            <div class="message-avatar">🤖</div>
+            <div class="message-content">
+              <div class="message-text">
+                您好！我是您的专业金融分析助手，基于智谱AI技术。我可以帮您：
+                <br>• 分析大宗交易市场数据
+                <br>• 解读K线图和趋势
+                <br>• 提供投资建议和风险评估
+                <br>• 回答金融相关问题
+                <br><br>请告诉我您想了解什么？
+              </div>
+              <div class="message-time">刚刚</div>
+            </div>
+          </div>
+        </div>
+        <div class="chat-input-container">
+          <div class="chat-input-wrapper">
+            <input type="text" id="aiMessageInput" placeholder="输入您的问题..." class="chat-input">
+            <button class="chat-send-btn" onclick="handleAIChat()">
+              <span>发送</span>
+            </button>
+          </div>
+          <div class="chat-suggestions">
+            <span class="chat-suggestion" onclick="sendSuggestion('请分析当前大宗交易市场趋势')">分析市场趋势</span>
+            <span class="chat-suggestion" onclick="sendSuggestion('如何解读K线图？')">解读K线图</span>
+            <span class="chat-suggestion" onclick="sendSuggestion('大宗交易的风险有哪些？')">风险评估</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 登录模态框 -->
+  <div class="modal" id="loginModal" style="display: none;">
+    <div class="modal-content glassmorphism">
+      <div class="modal-header">
+        <h3>用户登录</h3>
+        <button class="close-btn" onclick="closeModal('loginModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="loginUsername">用户名</label>
+            <input type="text" id="loginUsername" required>
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">密码</label>
+            <input type="password" id="loginPassword" required>
+          </div>
+          <button type="submit" class="btn-primary">登录</button>
+        </form>
+        <p class="form-footer">
+          还没有账号？<a href="#" onclick="showModal('registerModal')">立即注册</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 注册模态框 -->
+  <div class="modal" id="registerModal" style="display: none;">
+    <div class="modal-content glassmorphism">
+      <div class="modal-header">
+        <h3>用户注册</h3>
+        <button class="close-btn" onclick="closeModal('registerModal')">×</button>
+      </div>
+      <div class="modal-body">
+        <form id="registerForm">
+          <div class="form-group">
+            <label for="registerUsername">用户名</label>
+            <input type="text" id="registerUsername" required>
+          </div>
+          <div class="form-group">
+            <label for="registerEmail">邮箱</label>
+            <input type="email" id="registerEmail" required>
+          </div>
+          <div class="form-group">
+            <label for="registerPassword">密码</label>
+            <input type="password" id="registerPassword" required>
+          </div>
+          <div class="form-group">
+            <label for="registerFullName">姓名</label>
+            <input type="text" id="registerFullName">
+          </div>
+          <button type="submit" class="btn-primary">注册</button>
+        </form>
+        <p class="form-footer">
+          已有账号？<a href="#" onclick="showModal('loginModal')">立即登录</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 加载动画 -->
+  <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">AI正在分析中...</div>
+    </div>
+  </div>
+
+  <script>
+    // 全局变量
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
+    
+    // DOM元素
+    const searchBtn = $('#search-btn');
+    const query = $('#query');
+    const topk = $('#topk');
+    const useLLM = $('#use_llm');
+    const resultsSection = $('#resultsSection');
+    const resultsEl = $('#results');
+    const summaryEl = $('#summary');
+    const countEl = $('#result-count');
+    const searchTimeEl = $('#searchTime');
+    const loadingOverlay = $('#loadingOverlay');
+    const userProfile = $('#userProfile');
+
+    // 用户认证相关
+    let currentUser = null;
+    let accessToken = localStorage.getItem('accessToken');
+
+    // 东方财富网数据
+    const eastmoneyData = {
+      market: {
+        shanghaiIndex: 3666.44,
+        shanghaiChange: -0.46,
+        shanghaiChangePercent: -0.46,
+        totalAmount: 62034.99, // 万元
+        premiumAmount: 258.45, // 万元
+        discountAmount: 60163.73 // 万元
+      },
+      daily: {
+        tradeCount: 156,
+        tradeVolume: 1250.5, // 万股
+        tradeAmount: 45678.9, // 万元
+        avgDiscount: -2.5 // %
+      },
+      activeStocks: [
+        { code: '000001', name: '平安银行', price: 12.34, change: 2.5, count: 15, amount: 12345.6, discount: -1.2 },
+        { code: '000002', name: '万科A', price: 18.56, change: -1.2, count: 12, amount: 9876.5, discount: -2.1 },
+        { code: '000858', name: '五粮液', price: 156.78, change: 3.4, count: 8, amount: 8765.4, discount: 0.5 },
+        { code: '002415', name: '海康威视', price: 34.56, change: 1.8, count: 10, amount: 6543.2, discount: -1.8 },
+        { code: '600036', name: '招商银行', price: 45.67, change: -0.9, count: 9, amount: 5432.1, discount: -0.7 }
+      ],
+      activeBrokers: [
+        { name: '中信证券北京总部', lastDate: '2024-08-14', count: 25, amount: 12345.6, buyCount: 15, sellCount: 10 },
+        { name: '国泰君安上海江苏路', lastDate: '2024-08-14', count: 18, amount: 9876.5, buyCount: 12, sellCount: 6 },
+        { name: '华泰证券南京中山路', lastDate: '2024-08-14', count: 15, amount: 8765.4, buyCount: 8, sellCount: 7 },
+        { name: '招商证券深圳深南大道', lastDate: '2024-08-14', count: 12, amount: 6543.2, buyCount: 7, sellCount: 5 },
+        { name: '广发证券广州天河路', lastDate: '2024-08-14', count: 10, amount: 5432.1, buyCount: 6, sellCount: 4 }
+      ]
+    };
+
+    // 粒子背景配置
+    particlesJS('particles-js', {
+      particles: {
+        number: { value: 80, density: { enable: true, value_area: 800 } },
+        color: { value: '#3b82f6' },
+        shape: { type: 'circle' },
+        opacity: { value: 0.5, random: false },
+        size: { value: 3, random: true },
+        line_linked: {
+          enable: true,
+          distance: 150,
+          color: '#3b82f6',
+          opacity: 0.4,
+          width: 1
+        },
+        move: {
+          enable: true,
+          speed: 2,
+          direction: 'none',
+          random: false,
+          straight: false,
+          out_mode: 'out',
+          bounce: false
+        }
+      },
+      interactivity: {
+        detect_on: 'canvas',
+        events: {
+          onhover: { enable: true, mode: 'repulse' },
+          onclick: { enable: true, mode: 'push' },
+          resize: true
+        }
+      },
+      retina_detect: true
+    });
+
+    // 动态数字动画
+    function animateNumber(element, target, duration = 2000) {
+      const start = parseFloat(element.textContent.replace(/[^\d.-]/g, '')) || 0;
+      const increment = (target - start) / (duration / 16);
+      let current = start;
+      
+      const timer = setInterval(() => {
+        current += increment;
+        if ((increment > 0 && current >= target) || (increment < 0 && current <= target)) {
+          current = target;
+          clearInterval(timer);
+        }
+        
+        // 格式化数字
+        if (target >= 100000000) {
+          element.textContent = (current / 100000000).toFixed(2) + '亿';
+        } else if (target >= 10000) {
+          element.textContent = (current / 10000).toFixed(2) + '万';
+        } else {
+          element.textContent = current.toFixed(2);
+        }
+      }, 16);
+    }
+
+    // 初始化动态数字
+    function initAnimatedNumbers() {
+      $$('.metric-value').forEach(el => {
+        const value = parseInt(el.getAttribute('data-value'));
+        if (value) {
+          animateNumber(el, value);
+        }
+      });
+    }
+
+    // 更新东方财富网数据
+    function updateEastmoneyData() {
+      // 更新市场数据
+      $('#shanghaiIndex').textContent = eastmoneyData.market.shanghaiIndex.toFixed(2);
+      $('#shanghaiChange').textContent = `${eastmoneyData.market.shanghaiChange >= 0 ? '+' : ''}${eastmoneyData.market.shanghaiChange.toFixed(2)}%`;
+      $('#totalAmount').textContent = eastmoneyData.market.totalAmount.toFixed(2);
+      $('#premiumAmount').textContent = eastmoneyData.market.premiumAmount.toFixed(2);
+      $('#discountAmount').textContent = eastmoneyData.market.discountAmount.toFixed(2);
+      
+      // 更新每日明细数据
+      $('#tradeCount').textContent = eastmoneyData.daily.tradeCount;
+      $('#tradeVolume').textContent = eastmoneyData.daily.tradeVolume.toFixed(1);
+      $('#tradeAmount').textContent = eastmoneyData.daily.tradeAmount.toFixed(1);
+      $('#avgDiscount').textContent = eastmoneyData.daily.avgDiscount.toFixed(1);
+      
+      // 更新时间
+      const now = new Date();
+      const timeStr = now.toLocaleString('zh-CN');
+      $('#marketUpdateTime').textContent = timeStr;
+      $('#detailDate').textContent = now.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' });
+    }
+
+    // 渲染活跃股票表格
+    function renderActiveStocks() {
+      const tbody = $('#stocksTableBody');
+      tbody.innerHTML = '';
+      
+      eastmoneyData.activeStocks.forEach(stock => {
+        const row = document.createElement('div');
+        row.className = 'table-row';
+        row.innerHTML = `
+          <div class="table-cell">${stock.code}</div>
+          <div class="table-cell">${stock.name}</div>
+          <div class="table-cell">${stock.price}</div>
+          <div class="table-cell ${stock.change >= 0 ? 'positive' : 'negative'}">${stock.change >= 0 ? '+' : ''}${stock.change}%</div>
+          <div class="table-cell">${stock.count}</div>
+          <div class="table-cell">${stock.amount.toFixed(1)}</div>
+          <div class="table-cell ${stock.discount >= 0 ? 'positive' : 'negative'}">${stock.discount >= 0 ? '+' : ''}${stock.discount}%</div>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // 渲染营业部表格
+    function renderBrokerTable() {
+      const tbody = $('#brokerTableBody');
+      tbody.innerHTML = '';
+      
+      eastmoneyData.activeBrokers.forEach(broker => {
+        const row = document.createElement('div');
+        row.className = 'table-row';
+        row.innerHTML = `
+          <div class="table-cell">${broker.name}</div>
+          <div class="table-cell">${broker.lastDate}</div>
+          <div class="table-cell">${broker.count}</div>
+          <div class="table-cell">${broker.amount.toFixed(1)}</div>
+          <div class="table-cell">${broker.buyCount}</div>
+          <div class="table-cell">${broker.sellCount}</div>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // 初始化K线图
+    function initKlineChart() {
+      const ctx = document.getElementById('klineChart').getContext('2d');
+      const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+      gradient.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
+      gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+      
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'],
+          datasets: [{
+            label: '大宗交易指数',
+            data: [3660, 3665, 3670, 3668, 3675, 3678, 3676, 3677],
+            borderColor: '#3b82f6',
+            backgroundColor: gradient,
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 0,
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: '#3b82f6'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              titleColor: '#fff',
+              bodyColor: '#fff',
+              borderColor: '#3b82f6',
+              borderWidth: 1
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: false,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.1)',
+                drawBorder: false
+              },
+              ticks: {
+                color: '#64748b',
+                font: { size: 12 }
+              }
+            },
+            x: {
+              grid: {
+                display: false
+              },
+              ticks: {
+                color: '#64748b',
+                font: { size: 12 }
+              }
+            }
+          },
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          }
+        }
+      });
+      return chart;
+    }
+
+    // 初始化大盘指数图
+    function initMarketChart() {
+      const ctx = document.getElementById('marketChart').getContext('2d');
+      const gradient = ctx.createLinearGradient(0, 0, 0, 60);
+      gradient.addColorStop(0, 'rgba(239, 68, 68, 0.3)');
+      gradient.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
+      
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['', '', '', '', '', '', '', ''],
+          datasets: [{
+            data: [3665, 3668, 3670, 3672, 3674, 3676, 3677, 3678],
+            borderColor: '#ef4444',
+            backgroundColor: gradient,
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { display: false },
+            x: { display: false }
+          }
+        }
+      });
+      return chart;
+    }
+
+    // 显示加载动画
+    function showLoading() {
+      if (loadingOverlay) {
+        loadingOverlay.style.display = 'flex';
+      }
+    }
+
+    // 隐藏加载动画
+    function hideLoading() {
+      if (loadingOverlay) {
+        loadingOverlay.style.display = 'none';
+      }
+    }
+
+    // 渲染骨架屏
+    function renderSkeleton(n = 6) {
+      const items = Array.from({ length: n }).map(() => 
+        `<div class="result-card glassmorphism skeleton">
+           <div class="card-header">
+           <div class="sk-title"></div>
+             <div class="sk-badge"></div>
+           </div>
+           <div class="card-content">
+           <div class="sk-line w-80"></div>
+           <div class="sk-line w-60"></div>
+             <div class="sk-line w-40"></div>
+           </div>
+         </div>`
+      ).join('');
+      resultsEl.innerHTML = items;
+    }
+
+    // 创建标签
+    function makeTags(tags) {
+      if (!tags || !tags.length) return '';
+      return `<div class="tags">${tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>`;
+    }
+
+    // 搜索功能
+    async function performSearch() {
+      const payload = {
+        query: query.value.trim(),
+        top_k: Number(topk.value) || 10,
+        use_llm: useLLM.checked
+      };
+      
+      if (!payload.query) {
+        query.focus();
+        return;
+      }
+
+      showLoading();
+      resultsSection.style.display = 'block';
+      summaryEl.textContent = '';
+      countEl.textContent = '';
+      renderSkeleton();
+      
+      const startTime = Date.now();
+      
+      try {
+        const headers = {
+          'Content-Type': 'application/json'
+        };
+        
+        // 如果用户已登录，添加认证头
+        if (accessToken) {
+          headers['Authorization'] = `Bearer ${accessToken}`;
+        }
+        
+        const resp = await fetch('/api/search', {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify(payload)
+        });
+        
+        if (!resp.ok) {
+          const text = await resp.text();
+          resultsEl.innerHTML = `<div class="error-message">${text}</div>`;
+          return;
+        }
+        
+        const data = await resp.json();
+        const endTime = Date.now();
+        const searchTime = ((endTime - startTime) / 1000).toFixed(1);
+        
+        searchTimeEl.textContent = searchTime + 's';
+        summaryEl.innerHTML = data.summary ? `<div class="summary-content">${data.summary}</div>` : '';
+        countEl.textContent = `共 ${data.results.length} 条结果`;
+        resultsEl.innerHTML = '';
+        
+        data.results.forEach((r) => {
+          const l = r.listing;
+          const div = document.createElement('div');
+          div.className = 'result-card glassmorphism';
+          div.innerHTML = `
+            <div class="card-header">
+              <h3 class="card-title">${l.title}</h3>
+              <div class="score-badge">${r.score.toFixed(3)}</div>
+            </div>
+            <div class="card-content">
+              <div class="meta-info">
+                <span class="meta-item">类别：${l.category || '未知'}</span>
+                <span class="meta-item">地区：${l.region || '未知'}</span>
+                <span class="meta-item">价格：${l.price ?? '面议'}${l.unit || ''}</span>
+                <span class="meta-item">卖家：${l.seller || '未知'}</span>
+                <span class="meta-item">日期：${l.date || '未知'}</span>
+              </div>
+              ${makeTags(l.tags)}
+              <div class="description">${l.description || ''}</div>
+                            </div>
+          `;
+          resultsEl.appendChild(div);
+        });
+        
+      } catch (e) {
+        resultsEl.innerHTML = `<div class="error-message">搜索失败：${e.message}</div>`;
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // 检查认证状态
+    async function checkAuthStatus() {
+      if (accessToken) {
+        try {
+          const response = await fetch('/api/user/profile', {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
+          
+          if (response.ok) {
+            currentUser = await response.json();
+            updateUserDisplay();
+          } else {
+            localStorage.removeItem('accessToken');
+            accessToken = null;
+          }
+        } catch (error) {
+          console.error('检查认证状态失败:', error);
+        }
+      }
+    }
+
+    // 更新用户显示
+    function updateUserDisplay() {
+      if (currentUser) {
+        userProfile.querySelector('.username').textContent = currentUser.username;
+        userProfile.querySelector('.user-avatar span').textContent = '👤';
+      } else {
+        userProfile.querySelector('.username').textContent = '用户';
+        userProfile.querySelector('.user-avatar span').textContent = '👤';
+      }
+    }
+
+    // 显示模态框
+    function showModal(modalId) {
+      document.getElementById(modalId).style.display = 'flex';
+    }
+
+    // 关闭模态框
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    // 事件监听器
+    searchBtn.addEventListener('click', performSearch);
+    query.addEventListener('keydown', (e) => { 
+      if (e.key === 'Enter') performSearch(); 
+    });
+    
+    // 用户头像点击事件
+    userProfile.addEventListener('click', function() {
+      if (currentUser) {
+        if (confirm('是否要退出登录？')) {
+          currentUser = null;
+          accessToken = null;
+          localStorage.removeItem('accessToken');
+          updateUserDisplay();
+        }
+      } else {
+        showModal('loginModal');
+      }
+    });
+
+    // 登录表单提交
+    document.getElementById('loginForm').addEventListener('submit', async function(event) {
+      event.preventDefault();
+      
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+      
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username, password })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          accessToken = data.access_token;
+          currentUser = data.user;
+          
+          localStorage.setItem('accessToken', accessToken);
+          updateUserDisplay();
+          closeModal('loginModal');
+          
+          // 清空表单
+          document.getElementById('loginForm').reset();
+        } else {
+          const error = await response.json();
+          alert(error.detail);
+        }
+      } catch (error) {
+        console.error('登录失败:', error);
+        alert('登录失败，请重试');
+      }
+    });
+
+    // 注册表单提交
+    document.getElementById('registerForm').addEventListener('submit', async function(event) {
+      event.preventDefault();
+      
+      const username = document.getElementById('registerUsername').value;
+      const email = document.getElementById('registerEmail').value;
+      const password = document.getElementById('registerPassword').value;
+      const fullName = document.getElementById('registerFullName').value;
+      
+      try {
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username, email, password, full_name: fullName })
+        });
+        
+        if (response.ok) {
+          alert('注册成功！请登录');
+          closeModal('registerModal');
+          showModal('loginModal');
+          
+          // 清空表单
+          document.getElementById('registerForm').reset();
+        } else {
+          const error = await response.json();
+          alert(error.detail);
+        }
+      } catch (error) {
+        console.error('注册失败:', error);
+        alert('注册失败，请重试');
+      }
+    });
+
+    // 搜索建议点击
+    $$('.suggestion-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const queryText = chip.getAttribute('data-query');
+        query.value = queryText;
+        performSearch();
+      });
+    });
+
+    // 时间按钮切换
+    $$('.time-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        $$('.time-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        // 这里可以更新K线图数据
+      });
+    });
+
+    // 筛选按钮切换
+    $$('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const parent = btn.closest('.time-filter');
+        parent.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        // 这里可以更新表格数据
+      });
+    });
+
+    // AI聊天功能
+    function addMessageToChat(role, content, isLoading = false) {
+      const chatMessages = document.getElementById('chatMessages');
+      if (!chatMessages) return null;
+      
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${role}`;
+      
+      const avatar = role === 'user' ? '👤' : '🤖';
+      const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      
+      messageDiv.innerHTML = `
+        <div class="message-avatar">${avatar}</div>
+        <div class="message-content">
+          <div class="message-text">${content}</div>
+          <div class="message-time">${time}</div>
+        </div>
+      `;
+      
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      
+      return messageDiv;
+    }
+
+    // 处理AI聊天
+    async function handleAIChat() {
+      const messageInput = document.getElementById('aiMessageInput');
+      const message = messageInput.value.trim();
+      if (!message) return;
+      
+      // 添加用户消息到聊天界面
+      addMessageToChat('user', message);
+      messageInput.value = '';
+      
+      // 显示加载状态
+      const loadingMessage = addMessageToChat('assistant', '正在思考...', true);
+      
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: message,
+            system_prompt: "你是一个专业的金融分析师，专门分析大宗交易数据。请用中文回答，语言要专业、准确。请始终使用中文回复，不要使用英文。"
+          })
+        });
+        
+        const data = await response.json();
+        
+        // 移除加载消息
+        if (loadingMessage && loadingMessage.parentNode) {
+          loadingMessage.parentNode.removeChild(loadingMessage);
+        }
+        
+        // 添加AI回复
+        addMessageToChat('assistant', data.response);
+        
+      } catch (error) {
+        console.error('AI聊天失败:', error);
+        if (loadingMessage && loadingMessage.parentNode) {
+          loadingMessage.parentNode.removeChild(loadingMessage);
+        }
+        addMessageToChat('assistant', '抱歉，AI服务暂时不可用，请稍后重试。');
+      }
+    }
+
+    // 获取AI市场分析
+    async function getAIMarketAnalysis() {
+      const analysisBtn = document.getElementById('aiAnalysisBtn');
+      const originalText = analysisBtn.textContent;
+      analysisBtn.textContent = '分析中...';
+      analysisBtn.disabled = true;
+      
+      try {
+        const response = await fetch('/api/chat/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          // 在聊天界面显示分析结果
+          addMessageToChat('assistant', `📊 **AI市场分析**\n\n${data.analysis}`);
+        } else {
+          addMessageToChat('assistant', '抱歉，AI分析服务暂时不可用。');
+        }
+        
+      } catch (error) {
+        console.error('AI分析失败:', error);
+        addMessageToChat('assistant', '抱歉，AI分析服务暂时不可用，请稍后重试。');
+      } finally {
+        analysisBtn.textContent = originalText;
+        analysisBtn.disabled = false;
+      }
+    }
+
+    // 发送建议问题
+    function sendSuggestion(suggestion) {
+      document.getElementById('aiMessageInput').value = suggestion;
+      handleAIChat();
+    }
+
+    // 清空聊天记录
+    function clearChat() {
+      const chatMessages = document.getElementById('chatMessages');
+      chatMessages.innerHTML = `
+        <div class="message assistant">
+          <div class="message-avatar">🤖</div>
+          <div class="message-content">
+            <div class="message-text">
+              您好！我是您的专业金融分析助手，基于智谱AI技术。我可以帮您：
+              <br>• 分析大宗交易市场数据
+              <br>• 解读K线图和趋势
+              <br>• 提供投资建议和风险评估
+              <br>• 回答金融相关问题
+              <br><br>请告诉我您想了解什么？
+            </div>
+            <div class="message-time">刚刚</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 聊天输入框回车事件
+    document.addEventListener('DOMContentLoaded', () => {
+      const messageInput = document.getElementById('aiMessageInput');
+      if (messageInput) {
+        messageInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            handleAIChat();
+          }
+        });
+      }
+    });
+
+    // 页面加载时初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      initKlineChart();
+      initMarketChart();
+      initAnimatedNumbers();
+      updateEastmoneyData();
+      renderActiveStocks();
+      renderBrokerTable();
+      checkAuthStatus();
+      
+      // 添加一些动画效果
+      setTimeout(() => {
+        document.body.classList.add('loaded');
+      }, 100);
+      
+      // 定时更新数据
+      setInterval(updateEastmoneyData, 30000); // 每30秒更新一次
+    });
+  </script>
+
+  <!-- 页脚 -->
+  <footer class="main-footer">
+    <div class="footer-container">
+      <div class="footer-content">
+        <div class="footer-title">
+          <h2>Block Trade DT</h2>
+        </div>
+        <div class="footer-description">
+          <p>专业的大宗交易数据平台，为您提供实时、准确的市场信息</p>
+          <p>基于智谱AI技术，智能分析市场趋势，助力投资决策</p>
+        </div>
+        <div class="footer-social">
+          <a href="https://www.douyin.com/user/MS4wLjABAAAAkBUw0RHPp3VqepZHs6YB8nzjlQygC3Lr4ZuRLkgvabE?enter_from=general_search&enter_method=general_search&extra_params=%7B%22search_params%22%3A%7B%22search_result_id%22%3A%2268425914449%22%2C%22relation_tag%22%3A0%2C%22log_pb%22%3A%7B%22impr_id%22%3A%222025081515391302E704D8456ADD5031FE%22%7D%2C%22search_type%22%3A%22general%22%2C%22impr_id%22%3A%222025081515391302E704D8456ADD5031FE%22%2C%22search_id%22%3A%222025081515391302E704D8456ADD5031FE%22%2C%22search_keyword%22%3A%22sanawo%22%2C%22token_type%22%3A%22discover_list%22%7D%7D&from_tab_name=main" target="_blank" class="social-link douyin">
+            <span class="social-icon">抖音</span>
+          </a>
+          <a href="https://weibo.com/u/6136590501" target="_blank" class="social-link weibo">
+            <span class="social-icon">微博</span>
+          </a>
+          <a href="#" class="social-link wechat">
+            <span class="social-icon">微信</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

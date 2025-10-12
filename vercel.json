@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "app/main.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app/main.py"
+    }
+  ],
+  "env": {
+    "DATABASE_URL": "sqlite:///./block_trade_dt.db",
+    "JWT_SECRET_KEY": "block-trade-dt-super-secret-jwt-key-2024",
+    "ZHIPU_API_KEY": "7aee1f12feb24b5f8c298d445ddc6923.IphCkMRMDt0l0aAV",
+    "HOST": "0.0.0.0",
+    "PORT": "8000",
+    "RELOAD": "false"
+  }
+}
