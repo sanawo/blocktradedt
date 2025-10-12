@@ -94,12 +94,73 @@ async def index(request: Request):
     """首页"""
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.get("/trends", response_class=HTMLResponse)
+async def trends(request: Request):
+    """实时趋势页面"""
+    return templates.TemplateResponse("trends.html", {"request": request})
+
 @app.get("/health")
 async def health():
     """健康检查"""
     store = load_vector_store()
     status = "ok" if store is not None else "no-index"
     return {"status": status}
+
+@app.get("/api/trends/data")
+async def get_trends_data():
+    """获取趋势数据"""
+    import random
+    from datetime import datetime, timedelta
+    
+    # 生成模拟的实时趋势数据
+    now = datetime.now()
+    
+    # 生成过去24小时的数据点
+    time_labels = []
+    transaction_volumes = []
+    price_trends = []
+    
+    for i in range(24, 0, -1):
+        time = now - timedelta(hours=i)
+        time_labels.append(time.strftime("%H:%M"))
+        transaction_volumes.append(random.randint(50, 200))
+        price_trends.append(round(random.uniform(95, 105), 2))
+    
+    # 热门类别
+    categories = [
+        {"name": "钢材", "count": random.randint(100, 500), "change": round(random.uniform(-10, 10), 1)},
+        {"name": "煤炭", "count": random.randint(80, 400), "change": round(random.uniform(-10, 10), 1)},
+        {"name": "有色金属", "count": random.randint(60, 300), "change": round(random.uniform(-10, 10), 1)},
+        {"name": "化工产品", "count": random.randint(50, 250), "change": round(random.uniform(-10, 10), 1)},
+        {"name": "农产品", "count": random.randint(40, 200), "change": round(random.uniform(-10, 10), 1)},
+    ]
+    
+    # 热门地区
+    regions = [
+        {"name": "华东", "count": random.randint(200, 600), "percentage": round(random.uniform(20, 35), 1)},
+        {"name": "华北", "count": random.randint(150, 500), "percentage": round(random.uniform(15, 30), 1)},
+        {"name": "华南", "count": random.randint(100, 400), "percentage": round(random.uniform(10, 25), 1)},
+        {"name": "西南", "count": random.randint(80, 300), "percentage": round(random.uniform(8, 20), 1)},
+        {"name": "东北", "count": random.randint(60, 250), "percentage": round(random.uniform(5, 15), 1)},
+    ]
+    
+    # 实时统计
+    stats = {
+        "total_transactions": random.randint(1000, 5000),
+        "total_volume": round(random.uniform(10000, 50000), 2),
+        "avg_price": round(random.uniform(5000, 15000), 2),
+        "active_sellers": random.randint(100, 500),
+    }
+    
+    return {
+        "time_labels": time_labels,
+        "transaction_volumes": transaction_volumes,
+        "price_trends": price_trends,
+        "categories": categories,
+        "regions": regions,
+        "stats": stats,
+        "last_update": now.strftime("%Y-%m-%d %H:%M:%S")
+    }
 
 @app.post("/api/search", response_model=SearchResponse)
 async def api_search(payload: SearchRequest):
