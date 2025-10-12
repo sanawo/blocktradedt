@@ -18,12 +18,17 @@ templates = Jinja2Templates(directory="templates")
 
 # 全局变量
 vector_store = None
+llm_instance = None
 
 # Pydantic模型
 class SearchRequest(BaseModel):
     query: str
     top_k: Optional[int] = 10
     use_llm: Optional[bool] = False
+
+class ChatRequest(BaseModel):
+    message: str
+    context: Optional[str] = None
 
 class Listing(BaseModel):
     id: str
@@ -65,6 +70,23 @@ def load_vector_store():
         print(f"Failed to load vector store: {e}")
         return None
 
+def load_llm():
+    """加载LLM实例"""
+    global llm_instance
+    if llm_instance is not None:
+        return llm_instance
+    
+    try:
+        from app.llm import LLM
+        import os
+        api_key = os.getenv('ZHIPU_API_KEY')
+        llm_instance = LLM(api_key=api_key)
+        print("LLM instance loaded successfully")
+        return llm_instance
+    except Exception as e:
+        print(f"Failed to load LLM: {e}")
+        return None
+
 def generate_simple_summary(results: List[Dict[str, Any]], query: str) -> str:
     """生成简单摘要"""
     if not results:
@@ -86,8 +108,9 @@ def generate_simple_summary(results: List[Dict[str, Any]], query: str) -> str:
 
 @app.on_event("startup")
 async def startup_event():
-    """启动时加载向量存储"""
+    """启动时加载向量存储和LLM"""
     load_vector_store()
+    load_llm()
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
@@ -190,17 +213,62 @@ async def api_search(payload: SearchRequest):
             )
         
         # 生成摘要
-        summary = generate_simple_summary(results_raw, payload.query)
+        if payload.use_llm:
+            llm = load_llm()
+            if llm:
+                try:
+                    summary = llm.generate_summary(payload.query, results_raw)
+                    used_llm = True
+                except Exception as e:
+                    print(f"LLM summary failed: {e}")
+                    summary = generate_simple_summary(results_raw, payload.query)
+                    used_llm = False
+            else:
+                summary = generate_simple_summary(results_raw, payload.query)
+                used_llm = False
+        else:
+            summary = generate_simple_summary(results_raw, payload.query)
+            used_llm = False
         
         return SearchResponse(
             results=results,
             summary=summary,
-            used_llm=False
+            used_llm=used_llm
         )
     except Exception as e:
         return JSONResponse(
             status_code=500,
             content={"message": f"搜索失败: {str(e)}"}
+        )
+
+@app.post("/api/chat")
+async def api_chat(payload: ChatRequest):
+    """AI助手对话API"""
+    llm = load_llm()
+    
+    if llm is None or llm.client is None:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "message": "AI助手不可用，请检查ZHIPU_API_KEY环境变量配置",
+                "reply": "AI助手暂时不可用，请检查API密钥配置。"
+            }
+        )
+    
+    try:
+        reply = llm.chat(payload.message, payload.context)
+        return {
+            "message": payload.message,
+            "reply": reply,
+            "status": "success"
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "message": f"AI对话失败: {str(e)}",
+                "reply": f"抱歉，AI助手遇到了问题：{str(e)}"
+            }
         )
 
 if __name__ == "__main__":
