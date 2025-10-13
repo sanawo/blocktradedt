@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>实时新闻 - Block Trade DT</title>
+  <link rel="stylesheet" href="/static/styles_v2.css" />
+  <style>
+    .news-page {
+      min-height: 100vh;
+      background: var(--bg-primary);
+      padding-top: 5rem;
+    }
+    
+    .news-header {
+      max-width: 1400px;
+      margin: 0 auto 3rem;
+      padding: 0 2rem;
+      text-align: center;
+    }
+    
+    .news-header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .news-filters {
+      max-width: 1400px;
+      margin: 0 auto 2rem;
+      padding: 0 2rem;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    
+    .filter-btn {
+      padding: 0.5rem 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--transition-base);
+    }
+    
+    .filter-btn:hover,
+    .filter-btn.active {
+      background: rgba(59, 130, 246, 0.1);
+      border-color: var(--primary-color);
+      color: var(--primary-color);
+    }
+    
+    .news-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 2rem 4rem;
+    }
+    
+    .news-timeline {
+      position: relative;
+      padding-left: 2rem;
+    }
+    
+    .news-timeline::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--primary-color), transparent);
+    }
+    
+    .news-item {
+      position: relative;
+      margin-bottom: 2rem;
+      padding-left: 2rem;
+    }
+    
+    .news-item::before {
+      content: '';
+      position: absolute;
+      left: -0.5rem;
+      top: 0.5rem;
+      width: 12px;
+      height: 12px;
+      background: var(--primary-color);
+      border-radius: 50%;
+      border: 3px solid var(--bg-primary);
+      z-index: 1;
+    }
+    
+    .news-item-content {
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-xl);
+      padding: 1.5rem;
+      transition: all var(--transition-base);
+      cursor: pointer;
+    }
+    
+    .news-item-content:hover {
+      transform: translateX(10px);
+      box-shadow: var(--shadow-xl);
+      border-color: var(--primary-color);
+    }
+    
+    .news-time {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--primary-color);
+      border-radius: var(--radius-md);
+      font-size: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .news-item-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      line-height: 1.4;
+    }
+    
+    .news-item-summary {
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 0.75rem;
+    }
+    
+    .news-item-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+    
+    .news-item-tags {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-top: 0.75rem;
+    }
+    
+    .news-tag {
+      padding: 0.25rem 0.75rem;
+      background: rgba(139, 92, 246, 0.1);
+      color: var(--accent-color);
+      border-radius: var(--radius-md);
+      font-size: 0.75rem;
+    }
+    
+    .load-more {
+      text-align: center;
+      padding: 2rem;
+    }
+    
+    .auto-update-indicator {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      padding: 1rem 1.5rem;
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      box-shadow: var(--shadow-xl);
+      z-index: 1000;
+    }
+    
+    .update-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--success-color);
+      border-radius: 50%;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+    
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 固定导航栏 -->
+  <header class="fixed-header">
+    <div class="header-container">
+      <div class="logo">
+        <span class="logo-icon">📊</span>
+        <span class="logo-text">Block Trade DT</span>
+      </div>
+      
+      <nav class="main-nav">
+        <a href="/" class="nav-link">首页</a>
+        <a href="/#data" class="nav-link">市场数据</a>
+        <a href="/#analysis" class="nav-link">智能分析</a>
+        <a href="/news" class="nav-link active">实时资讯</a>
+        <a href="/trends" class="nav-link">趋势图表</a>
+      </nav>
+      
+      <div class="header-actions">
+        <div class="user-profile">
+          <div class="user-avatar">👤</div>
+          <span class="username">用户</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 新闻页面内容 -->
+  <div class="news-page">
+    <div class="news-header">
+      <h1>📰 实时新闻资讯</h1>
+      <p style="color: var(--text-secondary);">最新的大宗交易市场动态与行业资讯</p>
+    </div>
+    
+    <!-- 分类筛选 -->
+    <div class="news-filters">
+      <button class="filter-btn active" data-category="all">全部</button>
+      <button class="filter-btn" data-category="market">市场动态</button>
+      <button class="filter-btn" data-category="policy">政策法规</button>
+      <button class="filter-btn" data-category="analysis">行业分析</button>
+      <button class="filter-btn" data-category="company">公司新闻</button>
+      <button class="filter-btn" data-category="international">国际资讯</button>
+    </div>
+    
+    <!-- 新闻时间线 -->
+    <div class="news-container">
+      <div class="news-timeline" id="newsTimeline">
+        <!-- 动态加载新闻 -->
+      </div>
+      
+      <div class="load-more">
+        <button class="btn btn-outline" id="loadMoreBtn">
+          <span>加载更多</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 自动更新指示器 -->
+  <div class="auto-update-indicator">
+    <div class="update-dot"></div>
+    <span>自动更新：<span id="updateCountdown">30</span>秒</span>
+  </div>
+
+  <!-- 加载动画 -->
+  <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">加载中...</div>
+  </div>
+
+  <script>
+    // 全局变量
+    let currentPage = 1;
+    let currentCategory = 'all';
+    let updateCountdown = 30;
+    let countdownTimer = null;
+    
+    // 加载新闻
+    async function loadNews(page = 1, category = 'all', append = false) {
+      const timeline = document.getElementById('newsTimeline');
+      
+      if (!append) {
+        timeline.innerHTML = '<div class="loading-spinner" style="margin: 2rem auto;"></div>';
+      }
+      
+      try {
+        const response = await fetch(`/api/news?page=${page}&category=${category}&limit=20`);
+        const data = await response.json();
+        
+        if (!append) {
+          timeline.innerHTML = '';
+        }
+        
+        if (data.news && data.news.length > 0) {
+          data.news.forEach(item => {
+            const newsItem = createNewsItem(item);
+            timeline.insertAdjacentHTML('beforeend', newsItem);
+          });
+        } else if (!append) {
+          timeline.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+              <p style="font-size: 1.125rem;">暂无新闻</p>
+              <p style="font-size: 0.875rem; margin-top: 0.5rem;">请稍后刷新或切换分类查看</p>
+            </div>
+          `;
+        }
+        
+      } catch (error) {
+        console.error('加载新闻失败:', error);
+        if (!append) {
+          timeline.innerHTML = `
+            <div style="text-align: center; padding: 3rem; color: var(--error-color);">
+              加载失败，请稍后重试
+            </div>
+          `;
+        }
+      }
+    }
+    
+    // 创建新闻项HTML
+    function createNewsItem(item) {
+      const tags = item.tags ? item.tags.map(tag => 
+        `<span class="news-tag">${tag}</span>`
+      ).join('') : '';
+      
+      return `
+        <div class="news-item">
+          <div class="news-item-content" onclick="window.open('${item.url || '#'}', '_blank')">
+            <span class="news-time">${item.time || '刚刚'}</span>
+            <h3 class="news-item-title">${item.title}</h3>
+            <p class="news-item-summary">${item.summary}</p>
+            <div class="news-item-meta">
+              <span>📰 ${item.source || '未知来源'}</span>
+              <span>👁️ ${item.views || 0} 阅读</span>
+            </div>
+            ${tags ? `<div class="news-item-tags">${tags}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }
+    
+    // 分类筛选
+    function initFilters() {
+      const filterBtns = document.querySelectorAll('.filter-btn');
+      
+      filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          filterBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          
+          currentCategory = btn.dataset.category;
+          currentPage = 1;
+          loadNews(currentPage, currentCategory);
+          
+          // 重置倒计时
+          resetCountdown();
+        });
+      });
+    }
+    
+    // 加载更多
+    function initLoadMore() {
+      const loadMoreBtn = document.getElementById('loadMoreBtn');
+      
+      loadMoreBtn.addEventListener('click', () => {
+        currentPage++;
+        loadNews(currentPage, currentCategory, true);
+      });
+    }
+    
+    // 自动刷新倒计时
+    function startCountdown() {
+      countdownTimer = setInterval(() => {
+        updateCountdown--;
+        document.getElementById('updateCountdown').textContent = updateCountdown;
+        
+        if (updateCountdown <= 0) {
+          loadNews(1, currentCategory);
+          resetCountdown();
+        }
+      }, 1000);
+    }
+    
+    function resetCountdown() {
+      updateCountdown = 30;
+      document.getElementById('updateCountdown').textContent = updateCountdown;
+      
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+      }
+      startCountdown();
+    }
+    
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      loadNews(currentPage, currentCategory);
+      initFilters();
+      initLoadMore();
+      startCountdown();
+    });
+  </script>
+</body>
+</html>
+

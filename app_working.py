@@ -123,6 +123,16 @@ async def trends(request: Request):
     """实时趋势页面"""
     return templates.TemplateResponse("trends.html", {"request": request})
 
+@app.get("/v2", response_class=HTMLResponse)
+async def index_v2(request: Request):
+    """新版首页"""
+    return templates.TemplateResponse("index_v2.html", {"request": request})
+
+@app.get("/news", response_class=HTMLResponse)
+async def news_page(request: Request):
+    """实时新闻页面"""
+    return templates.TemplateResponse("news.html", {"request": request})
+
 @app.get("/health")
 async def health():
     """健康检查"""
@@ -271,6 +281,126 @@ async def api_chat(payload: ChatRequest):
                 "response": f"抱歉，AI助手遇到了问题：{str(e)}"
             }
         )
+
+@app.get("/api/news")
+async def api_news(page: int = 1, category: str = "all", limit: int = 20):
+    """获取新闻列表API"""
+    import random
+    from datetime import datetime, timedelta
+    
+    # 生成模拟新闻数据
+    categories_map = {
+        "market": "市场动态",
+        "policy": "政策法规",
+        "analysis": "行业分析",
+        "company": "公司新闻",
+        "international": "国际资讯"
+    }
+    
+    news_titles = [
+        "钢材价格持续上涨，市场供需关系紧张",
+        "国家发改委发布大宗商品价格调控新政策",
+        "2024年大宗交易市场分析报告出炉",
+        "A股市场大宗交易活跃度创新高",
+        "有色金属板块领涨，铜价突破历史新高",
+        "煤炭供应紧张，冬季保供压力加大",
+        "原油期货价格波动加剧，市场观望情绪浓厚",
+        "化工产品市场调整，部分品种价格回落",
+        "大宗商品ETF受到投资者青睐",
+        "国际市场动荡，国内大宗商品避险需求上升"
+    ]
+    
+    news_summaries = [
+        "受供应链紧张和需求增长双重影响，近期钢材价格持续上涨，市场预期后续仍有上涨空间。",
+        "国家发改委出台新政策，加强大宗商品价格监管，维护市场秩序，保障民生需求。",
+        "权威机构发布年度大宗交易市场分析报告，详细解读市场趋势和投资机会。",
+        "A股市场大宗交易活跃度创历史新高，显示出机构投资者对市场的信心增强。",
+        "有色金属板块表现强劲，铜价突破历史新高，专家建议关注相关投资机会。",
+        "随着冬季来临，煤炭供应紧张情况加剧，各地加强保供稳价措施。",
+        "国际原油价格波动加剧，市场观望情绪浓厚，投资者需谨慎应对。",
+        "化工产品市场出现调整，部分品种价格回落，行业洗牌加速。",
+        "大宗商品ETF成为投资者新宠，资金流入持续增加。",
+        "国际市场动荡不安，国内大宗商品避险需求上升，黄金等避险资产受追捧。"
+    ]
+    
+    sources = ["财经网", "新浪财经", "东方财富网", "证券时报", "第一财经", "财联社"]
+    tags_pool = ["钢材", "煤炭", "有色金属", "原油", "化工", "政策", "分析", "市场"]
+    
+    news_list = []
+    start_index = (page - 1) * limit
+    
+    for i in range(start_index, start_index + limit):
+        idx = i % len(news_titles)
+        time_delta = random.randint(i * 30, i * 60)
+        news_time = datetime.now() - timedelta(minutes=time_delta)
+        
+        cat = random.choice(list(categories_map.keys())) if category == "all" else category
+        
+        news_item = {
+            "id": f"news_{i + 1}",
+            "title": news_titles[idx],
+            "summary": news_summaries[idx],
+            "source": random.choice(sources),
+            "time": news_time.strftime("%Y-%m-%d %H:%M"),
+            "category": cat,
+            "category_name": categories_map.get(cat, "未分类"),
+            "views": random.randint(100, 10000),
+            "tags": random.sample(tags_pool, k=random.randint(2, 4)),
+            "url": f"https://example.com/news/{i + 1}",
+            "image": f"https://images.unsplash.com/photo-{1611974789855 + i}?w=400&q=80"
+        }
+        news_list.append(news_item)
+    
+    return {
+        "news": news_list,
+        "page": page,
+        "limit": limit,
+        "total": 100,
+        "has_more": page * limit < 100
+    }
+
+@app.get("/api/news/latest")
+async def api_news_latest(limit: int = 6):
+    """获取最新新闻API"""
+    import random
+    from datetime import datetime, timedelta
+    
+    news_titles = [
+        "钢材价格持续上涨，市场供需关系紧张",
+        "国家发改委发布大宗商品价格调控新政策",
+        "2024年大宗交易市场分析报告出炉",
+        "A股市场大宗交易活跃度创新高",
+        "有色金属板块领涨，铜价突破历史新高",
+        "煤炭供应紧张，冬季保供压力加大"
+    ]
+    
+    news_summaries = [
+        "受供应链紧张和需求增长双重影响，近期钢材价格持续上涨...",
+        "国家发改委出台新政策，加强大宗商品价格监管，维护市场秩序...",
+        "权威机构发布年度大宗交易市场分析报告，详细解读市场趋势...",
+        "A股市场大宗交易活跃度创历史新高，显示出机构投资者信心...",
+        "有色金属板块表现强劲，铜价突破历史新高，专家建议关注...",
+        "随着冬季来临，煤炭供应紧张情况加剧，各地加强保供措施..."
+    ]
+    
+    sources = ["财经网", "新浪财经", "东方财富网", "证券时报", "第一财经", "财联社"]
+    
+    news_list = []
+    for i in range(min(limit, len(news_titles))):
+        time_delta = random.randint(i * 10, i * 30)
+        news_time = datetime.now() - timedelta(minutes=time_delta)
+        
+        news_item = {
+            "id": f"latest_{i + 1}",
+            "title": news_titles[i],
+            "summary": news_summaries[i],
+            "source": random.choice(sources),
+            "time": news_time.strftime("%Y-%m-%d %H:%M"),
+            "image": f"https://images.unsplash.com/photo-{1611974789855 + i * 1000}?w=400&q=80"
+        }
+        news_list.append(news_item)
+    
+    return news_list
 
 if __name__ == "__main__":
     import uvicorn

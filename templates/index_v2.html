@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Block Trade DT - 大宗交易数据平台</title>
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="/static/styles_v2.css" />
+  
+  <!-- 外部库 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  
+  <!-- 懒加载 -->
+  <script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload@17.8.5/dist/lazyload.min.js"></script>
+</head>
+<body>
+  <!-- 自定义光标 -->
+  <div class="custom-cursor">
+    <div class="cursor-dot"></div>
+    <div class="cursor-outline"></div>
+  </div>
+
+  <!-- 固定导航栏 -->
+  <header class="fixed-header" id="mainHeader">
+    <div class="header-container">
+      <div class="logo">
+        <span class="logo-icon">📊</span>
+        <span class="logo-text">Block Trade DT</span>
+      </div>
+      
+      <nav class="main-nav">
+        <a href="#hero" class="nav-link active" data-section="hero">首页</a>
+        <a href="#data" class="nav-link" data-section="data">市场数据</a>
+        <a href="#analysis" class="nav-link" data-section="analysis">智能分析</a>
+        <a href="#news" class="nav-link" data-section="news">实时资讯</a>
+        <a href="/trends" class="nav-link">趋势图表</a>
+      </nav>
+      
+      <div class="header-actions">
+        <a href="/news" class="news-badge">
+          <span class="badge-icon">📰</span>
+          <span class="badge-text">实时新闻</span>
+          <span class="badge-indicator"></span>
+        </a>
+        <div class="user-profile" id="userProfile">
+          <div class="user-avatar">👤</div>
+          <span class="username">用户</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 滑动导航指示器 -->
+  <div class="scroll-indicator">
+    <div class="indicator-item active" data-target="hero"></div>
+    <div class="indicator-item" data-target="data"></div>
+    <div class="indicator-item" data-target="analysis"></div>
+    <div class="indicator-item" data-target="news"></div>
+  </div>
+
+  <!-- 主要内容区域 - 全屏滑动分屏 -->
+  <main class="fullpage-container">
+    
+    <!-- 第一屏：英雄区 -->
+    <section class="section hero-section" id="hero" data-anchor="hero">
+      <div class="hero-background">
+        <img 
+          class="lazy hero-bg-image" 
+          data-src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=1920&q=80" 
+          alt="交易大厅背景"
+        />
+        <div class="hero-overlay"></div>
+      </div>
+      
+      <div class="hero-content">
+        <div class="hero-badge animate-fade-in">
+          <span class="badge-dot"></span>
+          <span>实时更新中</span>
+        </div>
+        
+        <h1 class="hero-title animate-slide-up">
+          AI驱动的<br/>
+          <span class="gradient-text">大宗交易数据平台</span>
+        </h1>
+        
+        <p class="hero-subtitle animate-slide-up delay-1">
+          基于智谱AI技术，实时分析市场趋势，精准预测交易机会
+        </p>
+        
+        <div class="hero-stats animate-slide-up delay-2">
+          <div class="stat-item">
+            <div class="stat-value" data-value="15000">0</div>
+            <div class="stat-label">日交易量</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" data-value="4568">0</div>
+            <div class="stat-label">活跃股票</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" data-value="98">0</div>
+            <div class="stat-label">准确率%</div>
+          </div>
+        </div>
+        
+        <div class="hero-actions animate-slide-up delay-3">
+          <button class="btn btn-primary btn-large" onclick="scrollToSection('data')">
+            <span>开始探索</span>
+            <span class="btn-arrow">→</span>
+          </button>
+          <button class="btn btn-outline btn-large" onclick="scrollToSection('analysis')">
+            <span>AI智能分析</span>
+          </button>
+        </div>
+      </div>
+      
+      <div class="scroll-hint">
+        <div class="mouse-icon">
+          <div class="mouse-wheel"></div>
+        </div>
+        <span>向下滚动探索更多</span>
+      </div>
+    </section>
+
+    <!-- 第二屏：市场数据 -->
+    <section class="section data-section" id="data" data-anchor="data">
+      <div class="section-background">
+        <img 
+          class="lazy section-bg-image" 
+          data-src="https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=1920&q=80" 
+          alt="数据背景"
+        />
+        <div class="section-overlay"></div>
+      </div>
+      
+      <div class="section-container">
+        <div class="section-header">
+          <h2 class="section-title reveal-text">实时市场数据</h2>
+          <p class="section-subtitle">来自东方财富网的实时大宗交易数据</p>
+        </div>
+        
+        <div class="data-grid">
+          <!-- 市场概览卡片 -->
+          <div class="data-card card-hover" data-tilt>
+            <div class="card-icon">📈</div>
+            <h3>上证指数</h3>
+            <div class="card-value">
+              <span class="value-number" id="indexValue">3,666.44</span>
+              <span class="value-change negative" id="indexChange">-0.46%</span>
+            </div>
+            <div class="card-chart">
+              <canvas id="miniChart1" width="100" height="40"></canvas>
+            </div>
+          </div>
+          
+          <!-- 交易量卡片 -->
+          <div class="data-card card-hover" data-tilt>
+            <div class="card-icon">💰</div>
+            <h3>总成交额</h3>
+            <div class="card-value">
+              <span class="value-number">4567.89<small>亿</small></span>
+              <span class="value-change positive">+12.5%</span>
+            </div>
+            <div class="card-progress">
+              <div class="progress-bar" style="width: 75%"></div>
+            </div>
+          </div>
+          
+          <!-- 活跃股票 -->
+          <div class="data-card card-hover" data-tilt>
+            <div class="card-icon">🏢</div>
+            <h3>活跃股票</h3>
+            <div class="card-value">
+              <span class="value-number">2,847<small>只</small></span>
+              <span class="value-change positive">+15</span>
+            </div>
+            <div class="card-tags">
+              <span class="tag">钢材</span>
+              <span class="tag">煤炭</span>
+              <span class="tag">有色</span>
+            </div>
+          </div>
+          
+          <!-- 智能推荐 -->
+          <div class="data-card card-hover card-highlight" data-tilt>
+            <div class="card-icon">🤖</div>
+            <h3>AI智能推荐</h3>
+            <div class="ai-insight">
+              <p>基于大数据分析，今日钢材类交易活跃度提升32%，建议重点关注...</p>
+            </div>
+            <button class="btn btn-sm btn-primary" onclick="scrollToSection('analysis')">
+              查看详情
+            </button>
+          </div>
+        </div>
+        
+        <!-- 实时数据表格 -->
+        <div class="data-table-container">
+          <h3 class="table-title">热门交易排行</h3>
+          <div class="data-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>排名</th>
+                  <th>证券代码</th>
+                  <th>证券简称</th>
+                  <th>最新价</th>
+                  <th>涨跌幅</th>
+                  <th>成交额(万)</th>
+                </tr>
+              </thead>
+              <tbody id="hotStocksTable">
+                <!-- 动态填充 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 第三屏：智能分析 -->
+    <section class="section analysis-section" id="analysis" data-anchor="analysis">
+      <div class="section-background">
+        <img 
+          class="lazy section-bg-image" 
+          data-src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1920&q=80" 
+          alt="分析背景"
+        />
+        <div class="section-overlay"></div>
+      </div>
+      
+      <div class="section-container">
+        <div class="section-header">
+          <h2 class="section-title reveal-text">AI智能分析</h2>
+          <p class="section-subtitle">基于智谱AI的专业金融分析</p>
+        </div>
+        
+        <div class="analysis-layout">
+          <!-- 搜索区域 -->
+          <div class="search-panel card-glow">
+            <h3>智能检索</h3>
+            <div class="search-bar">
+              <input 
+                type="text" 
+                id="query" 
+                placeholder="例如：查找2024年大宗交易数据，分析铜相关交易" 
+                class="search-input"
+              />
+              <button class="btn btn-primary" id="search-btn">
+                <span>🚀</span>
+                <span>开始检索</span>
+              </button>
+            </div>
+            
+            <div class="search-options">
+              <label class="option-item">
+                <span>检索数量</span>
+                <input type="number" id="topk" value="10" min="1" max="50" />
+              </label>
+              <label class="option-item">
+                <input type="checkbox" id="use_llm" checked />
+                <span>使用AI分析</span>
+              </label>
+            </div>
+            
+            <div class="search-suggestions">
+              <span class="suggestion-chip" data-query="分析2024年大宗交易趋势">2024趋势分析</span>
+              <span class="suggestion-chip" data-query="查找股票大宗交易数据">股票交易</span>
+              <span class="suggestion-chip" data-query="基金大宗交易分析">基金分析</span>
+            </div>
+          </div>
+          
+          <!-- AI助手 -->
+          <div class="ai-assistant card-glow">
+            <div class="assistant-header">
+              <h3>🤖 AI智能助手</h3>
+              <button class="btn btn-sm" onclick="clearChat()">清空</button>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+              <div class="message assistant">
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                  <p>您好！我是您的专业金融分析助手。我可以帮您：</p>
+                  <ul>
+                    <li>分析大宗交易市场数据</li>
+                    <li>解读K线图和趋势</li>
+                    <li>提供投资建议和风险评估</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <div class="chat-input-container">
+              <input 
+                type="text" 
+                id="aiMessageInput" 
+                placeholder="输入您的问题..." 
+                class="chat-input"
+              />
+              <button class="btn btn-primary" onclick="handleAIChat()">
+                发送
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 搜索结果 -->
+        <div class="search-results" id="resultsSection" style="display: none;">
+          <div class="results-header">
+            <h3 id="result-count">搜索结果</h3>
+            <span class="search-time">耗时: <span id="searchTime">0s</span></span>
+          </div>
+          <div id="summary" class="ai-summary"></div>
+          <div id="results" class="results-grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 第四屏：实时资讯 -->
+    <section class="section news-section" id="news" data-anchor="news">
+      <div class="section-background">
+        <img 
+          class="lazy section-bg-image" 
+          data-src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=1920&q=80" 
+          alt="新闻背景"
+        />
+        <div class="section-overlay"></div>
+      </div>
+      
+      <div class="section-container">
+        <div class="section-header">
+          <h2 class="section-title reveal-text">实时资讯</h2>
+          <p class="section-subtitle">最新的大宗交易市场动态</p>
+          <a href="/news" class="btn btn-outline">查看全部新闻 →</a>
+        </div>
+        
+        <div class="news-grid" id="newsGrid">
+          <!-- 动态加载新闻 -->
+        </div>
+        
+        <!-- 市场热点 -->
+        <div class="hotspot-section">
+          <h3>📊 今日市场热点</h3>
+          <div class="hotspot-tags">
+            <span class="hotspot-tag hot">钢材价格上涨</span>
+            <span class="hotspot-tag">煤炭供应紧张</span>
+            <span class="hotspot-tag trending">有色金属反弹</span>
+            <span class="hotspot-tag">原油期货波动</span>
+            <span class="hotspot-tag">化工产品调整</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 加载动画 -->
+  <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">AI正在分析中...</div>
+  </div>
+
+  <!-- 页脚 -->
+  <footer class="modern-footer">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <h3>Block Trade DT</h3>
+        <p>专业的大宗交易数据平台</p>
+      </div>
+      <div class="footer-links">
+        <a href="https://www.douyin.com/user/MS4wLjABAAAAkBUw0RHPp3VqepZHs6YB8nzjlQygC3Lr4ZuRLkgvabE" target="_blank">抖音</a>
+        <a href="https://weibo.com/u/6136590501" target="_blank">微博</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JavaScript -->
+  <script src="/static/scripts_v2.js"></script>
+</body>
+</html>
+
