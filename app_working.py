@@ -125,8 +125,8 @@ async def index_v1(request: Request):
 
 @app.get("/trends", response_class=HTMLResponse)
 async def trends(request: Request):
-    """实时趋势页面"""
-    return templates.TemplateResponse("trends.html", {"request": request})
+    """实时趋势页面（深色模式）"""
+    return templates.TemplateResponse("trends_dark.html", {"request": request})
 
 @app.get("/v2", response_class=HTMLResponse)
 async def index_v2(request: Request):
@@ -328,7 +328,7 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
         "国际市场动荡不安，国内大宗商品避险需求上升，黄金等避险资产受追捧。"
     ]
     
-    sources = ["财经网", "新浪财经", "东方财富网", "证券时报", "第一财经", "财联社"]
+    sources = ["财经网", "新浪财经", "财新网", "证券时报", "第一财经", "财联社"]
     tags_pool = ["钢材", "煤炭", "有色金属", "原油", "化工", "政策", "分析", "市场"]
     
     news_list = []
@@ -388,7 +388,7 @@ async def api_news_latest(limit: int = 6):
         "随着冬季来临，煤炭供应紧张情况加剧，各地加强保供措施..."
     ]
     
-    sources = ["财经网", "新浪财经", "东方财富网", "证券时报", "第一财经", "财联社"]
+    sources = ["财经网", "新浪财经", "财新网", "证券时报", "第一财经", "财联社"]
     
     news_list = []
     for i in range(min(limit, len(news_titles))):
