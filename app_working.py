@@ -29,6 +29,7 @@ class SearchRequest(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     context: Optional[str] = None
+    system_prompt: Optional[str] = None
 
 class Listing(BaseModel):
     id: str
@@ -251,15 +252,15 @@ async def api_chat(payload: ChatRequest):
             status_code=400,
             content={
                 "message": "AI助手不可用，请检查ZHIPU_API_KEY环境变量配置",
-                "reply": "AI助手暂时不可用，请检查API密钥配置。"
+                "response": "AI助手暂时不可用，请检查API密钥配置。"
             }
         )
     
     try:
-        reply = llm.chat(payload.message, payload.context)
+        reply = llm.chat(payload.message, payload.context, payload.system_prompt)
         return {
             "message": payload.message,
-            "reply": reply,
+            "response": reply,
             "status": "success"
         }
     except Exception as e:
@@ -267,7 +268,7 @@ async def api_chat(payload: ChatRequest):
             status_code=500,
             content={
                 "message": f"AI对话失败: {str(e)}",
-                "reply": f"抱歉，AI助手遇到了问题：{str(e)}"
+                "response": f"抱歉，AI助手遇到了问题：{str(e)}"
             }
         )
 

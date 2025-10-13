@@ -114,13 +114,14 @@ class LLM:
         
         return "\n".join(context_parts)
     
-    def chat(self, message: str, context: Optional[str] = None) -> str:
+    def chat(self, message: str, context: Optional[str] = None, system_prompt: Optional[str] = None) -> str:
         """
         AI助手对话功能
         
         Args:
             message: 用户消息
             context: 可选的上下文信息
+            system_prompt: 可选的系统提示词，如果提供则使用此提示词替代默认提示词
             
         Returns:
             AI回复
@@ -129,10 +130,12 @@ class LLM:
             return "AI助手暂时不可用，请检查API密钥配置。"
         
         try:
+            # 使用自定义system_prompt或默认提示词
+            default_system_prompt = "你是一个专业的大宗交易数据分析助手。你可以帮助用户理解市场趋势、分析交易数据、回答相关问题。请用专业、友好的语气回答。"
             messages = [
                 {
                     "role": "system",
-                    "content": "你是一个专业的大宗交易数据分析助手。你可以帮助用户理解市场趋势、分析交易数据、回答相关问题。请用专业、友好的语气回答。"
+                    "content": system_prompt if system_prompt else default_system_prompt
                 }
             ]
             
