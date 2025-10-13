@@ -71,7 +71,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
 # 主页路由
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("index_v2.html", {"request": request})
 
 # 趋势页面（深色模式）
 @app.get("/trends", response_class=HTMLResponse)

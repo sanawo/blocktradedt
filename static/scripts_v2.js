@@ -391,18 +391,18 @@ async function handleAIChat() {
     const data = await response.json();
     
     // 移除"正在思考..."消息
-    const messages = $('#chatMessages').children;
-    if (messages.length > 0) {
-      messages[messages.length - 1].remove();
+    const chatMessages = $('#chatMessages');
+    if (chatMessages && chatMessages.lastChild) {
+      chatMessages.removeChild(chatMessages.lastChild);
     }
     
     addMessageToChat('assistant', data.response || '抱歉，AI服务暂时不可用。');
     
   } catch (error) {
     console.error('AI聊天失败:', error);
-    const messages = $('#chatMessages').children;
-    if (messages.length > 0) {
-      messages[messages.length - 1].remove();
+    const chatMessages = $('#chatMessages');
+    if (chatMessages && chatMessages.lastChild) {
+      chatMessages.removeChild(chatMessages.lastChild);
     }
     addMessageToChat('assistant', '抱歉，AI服务暂时不可用，请稍后重试。');
   }
@@ -568,4 +568,5 @@ window.scrollToSection = scrollToSection;
 window.performSearch = performSearch;
 window.handleAIChat = handleAIChat;
 window.clearChat = clearChat;
+
 
