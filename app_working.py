@@ -2,7 +2,7 @@
 大宗交易信息检索平台 - 工作版本
 """
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
@@ -113,9 +113,14 @@ async def startup_event():
     load_vector_store()
     load_llm()
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    """首页"""
+@app.get("/")
+async def index():
+    """首页 - 重定向到新版"""
+    return RedirectResponse(url="/v2", status_code=302)
+
+@app.get("/v1", response_class=HTMLResponse)
+async def index_v1(request: Request):
+    """原版首页（保留访问）"""
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/trends", response_class=HTMLResponse)
