@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+fc42f6448b65494a9f34617d5167dcbf.PFtIy0kn19Vauf1D<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
@@ -56,8 +56,8 @@
     <section class="eastmoney-data-panel">
       <div class="data-container">
         <div class="data-header">
-          <h2>东方财富网大宗交易数据</h2>
-          <p>实时更新的大宗交易信息，数据来源：<a href="https://data.eastmoney.com/dzjy/" target="_blank">东方财富网</a></p>
+          <h2>大宗交易数据</h2>
+          <p>实时更新的大宗交易信息，权威数据源持续更新</p>
         </div>
         
         <!-- 市场统计 -->
@@ -181,7 +181,7 @@
       <div class="search-container glassmorphism">
         <div class="search-header">
           <h1 class="search-title">AI智能大宗交易检索</h1>
-          <p class="search-subtitle">基于东方财富网数据，支持自然语言查询，AI深度分析交易数据</p>
+          <p class="search-subtitle">基于权威数据源，支持自然语言查询，AI深度分析交易数据</p>
         </div>
         <div class="search-bar-container">
           <div class="search-input-wrapper">
@@ -272,7 +272,7 @@
         <div class="chart-header">
           <div class="chart-title">
             <h3>大宗交易K线分析</h3>
-            <div class="chart-subtitle">基于东方财富网实时数据的大宗交易走势分析</div>
+            <div class="chart-subtitle">基于实时数据的大宗交易走势分析</div>
           </div>
           <div class="chart-controls">
             <div class="time-controls">
@@ -449,8 +449,8 @@
     let currentUser = null;
     let accessToken = localStorage.getItem('accessToken');
 
-    // 东方财富网数据
-    const eastmoneyData = {
+    // 市场数据
+    const marketData = {
       market: {
         shanghaiIndex: 3666.44,
         shanghaiChange: -0.46,
@@ -551,20 +551,20 @@
       });
     }
 
-    // 更新东方财富网数据
-    function updateEastmoneyData() {
+    // 更新市场数据
+    function updateMarketData() {
       // 更新市场数据
-      $('#shanghaiIndex').textContent = eastmoneyData.market.shanghaiIndex.toFixed(2);
-      $('#shanghaiChange').textContent = `${eastmoneyData.market.shanghaiChange >= 0 ? '+' : ''}${eastmoneyData.market.shanghaiChange.toFixed(2)}%`;
-      $('#totalAmount').textContent = eastmoneyData.market.totalAmount.toFixed(2);
-      $('#premiumAmount').textContent = eastmoneyData.market.premiumAmount.toFixed(2);
-      $('#discountAmount').textContent = eastmoneyData.market.discountAmount.toFixed(2);
+      $('#shanghaiIndex').textContent = marketData.market.shanghaiIndex.toFixed(2);
+      $('#shanghaiChange').textContent = `${marketData.market.shanghaiChange >= 0 ? '+' : ''}${marketData.market.shanghaiChange.toFixed(2)}%`;
+      $('#totalAmount').textContent = marketData.market.totalAmount.toFixed(2);
+      $('#premiumAmount').textContent = marketData.market.premiumAmount.toFixed(2);
+      $('#discountAmount').textContent = marketData.market.discountAmount.toFixed(2);
       
       // 更新每日明细数据
-      $('#tradeCount').textContent = eastmoneyData.daily.tradeCount;
-      $('#tradeVolume').textContent = eastmoneyData.daily.tradeVolume.toFixed(1);
-      $('#tradeAmount').textContent = eastmoneyData.daily.tradeAmount.toFixed(1);
-      $('#avgDiscount').textContent = eastmoneyData.daily.avgDiscount.toFixed(1);
+      $('#tradeCount').textContent = marketData.daily.tradeCount;
+      $('#tradeVolume').textContent = marketData.daily.tradeVolume.toFixed(1);
+      $('#tradeAmount').textContent = marketData.daily.tradeAmount.toFixed(1);
+      $('#avgDiscount').textContent = marketData.daily.avgDiscount.toFixed(1);
       
       // 更新时间
       const now = new Date();
@@ -578,7 +578,7 @@
       const tbody = $('#stocksTableBody');
       tbody.innerHTML = '';
       
-      eastmoneyData.activeStocks.forEach(stock => {
+      marketData.activeStocks.forEach(stock => {
         const row = document.createElement('div');
         row.className = 'table-row';
         row.innerHTML = `
@@ -599,7 +599,7 @@
       const tbody = $('#brokerTableBody');
       tbody.innerHTML = '';
       
-      eastmoneyData.activeBrokers.forEach(broker => {
+      marketData.activeBrokers.forEach(broker => {
         const row = document.createElement('div');
         row.className = 'table-row';
         row.innerHTML = `
@@ -1147,7 +1147,7 @@
       initKlineChart();
       initMarketChart();
       initAnimatedNumbers();
-      updateEastmoneyData();
+      updateMarketData();
       renderActiveStocks();
       renderBrokerTable();
       checkAuthStatus();
@@ -1158,7 +1158,7 @@
       }, 100);
       
       // 定时更新数据
-      setInterval(updateEastmoneyData, 30000); // 每30秒更新一次
+      setInterval(updateMarketData, 30000); // 每30秒更新一次
     });
   </script>
 
