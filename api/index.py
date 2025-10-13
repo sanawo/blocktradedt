@@ -52,9 +52,29 @@ templates = Jinja2Templates(directory="templates")
 # 安全配置
 security = HTTPBearer()
 
-# 初始化检索器和LLM
-retriever = Retriever()
-llm = LLM()
+# 初始化检索器和LLM（延迟初始化以避免启动时错误）
+retriever = None
+llm = None
+
+def get_retriever():
+    global retriever
+    if retriever is None:
+        try:
+            retriever = Retriever()
+        except Exception as e:
+            print(f"Retriever初始化失败: {e}")
+            retriever = None
+    return retriever
+
+def get_llm():
+    global llm
+    if llm is None:
+        try:
+            llm = LLM()
+        except Exception as e:
+            print(f"LLM初始化失败: {e}")
+            llm = None
+    return llm
 
 # 依赖项
 def get_db():
@@ -142,11 +162,26 @@ async def get_user_profile(current_user: User = Depends(get_current_user)):
 @app.post("/api/search")
 async def search(request: SearchRequest, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
     try:
+        # 获取检索器和LLM
+        retriever_instance = get_retriever()
+        llm_instance = get_llm()
+        
+        if retriever_instance is None:
+            raise HTTPException(status_code=503, detail="检索服务暂时不可用，请稍后重试")
+        
         # 执行搜索
-        results = retriever.search(request.query)
+        results = retriever_instance.search(request.query)
         
         # 生成摘要
-        summary = llm.generate_summary(request.query, results)
+        summary = ""
+        if llm_instance:
+            try:
+                summary = llm_instance.generate_summary(request.query, results)
+            except Exception as e:
+                print(f"生成摘要失败: {e}")
+                summary = f"找到 {len(results)} 条相关结果"
+        else:
+            summary = f"找到 {len(results)} 条相关结果"
         
         # 记录搜索历史（如果用户已登录）
         if current_user:
@@ -164,6 +199,8 @@ async def search(request: SearchRequest, db: Session = Depends(get_db), current_
             "summary": summary,
             "timestamp": datetime.now().isoformat()
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
