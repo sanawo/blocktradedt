@@ -19,10 +19,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制应用代码
 COPY . .
 
-# 复制启动脚本
-COPY startup.sh /app/startup.sh
-RUN chmod +x /app/startup.sh
-
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8000
@@ -30,6 +26,10 @@ ENV PORT=8000
 # 暴露端口
 EXPOSE 8000
 
-# 启动命令
-CMD ["/app/startup.sh"]
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:8000/health || exit 1
+
+# 启动命令 - 直接启动 uvicorn
+CMD ["python", "-m", "uvicorn", "api.index:app", "--host", "0.0.0.0", "--port", "8000"]
 
