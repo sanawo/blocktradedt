@@ -46,8 +46,27 @@ def get_zhipu_ai():
 app = FastAPI(title="Block Trade DT", description="大宗交易数据检索平台")
 
 # 静态文件和模板
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+import logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+try:
+    # 检查目录是否存在
+    if os.path.exists("static"):
+        app.mount("/static", StaticFiles(directory="static"), name="static")
+        logger.info("✅ 静态文件目录已挂载")
+    else:
+        logger.warning("⚠️  静态文件目录不存在")
+    
+    if os.path.exists("templates"):
+        templates = Jinja2Templates(directory="templates")
+        logger.info("✅ 模板目录已加载")
+    else:
+        logger.warning("⚠️  模板目录不存在")
+        templates = None
+except Exception as e:
+    logger.error(f"❌ 初始化静态文件或模板失败: {e}")
+    templates = None
 
 # 安全配置
 security = HTTPBearer()
@@ -98,19 +117,45 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         raise HTTPException(status_code=401, detail="User not found")
     return user
 
+def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)), db: Session = Depends(get_db)):
+    """获取当前用户（可选），如果未提供token则返回None"""
+    if credentials is None:
+        return None
+    try:
+        payload = jwt.decode(credentials.credentials, Config.get_jwt_secret_key(), algorithms=["HS256"])
+        username: str = payload.get("sub")
+        if username is None:
+            return None
+    except jwt.PyJWTError:
+        return None
+    
+    user = db.query(User).filter(User.username == username).first()
+    return user
+
+# 健康检查端点
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "Block Trade DT"}
+
 # 主页路由
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
+    if templates is None:
+        return HTMLResponse("<h1>Block Trade DT API</h1><p>模板系统未加载，请使用 API 端点</p>")
     return templates.TemplateResponse("index_v2.html", {"request": request})
 
 # 趋势页面（深色模式）
 @app.get("/trends", response_class=HTMLResponse)
 async def trends_page(request: Request):
+    if templates is None:
+        return HTMLResponse("<h1>Trends</h1><p>模板系统未加载</p>")
     return templates.TemplateResponse("trends_dark.html", {"request": request})
 
 # 新闻页面
 @app.get("/news", response_class=HTMLResponse)
 async def news_page(request: Request):
+    if templates is None:
+        return HTMLResponse("<h1>News</h1><p>模板系统未加载</p>")
     return templates.TemplateResponse("news.html", {"request": request})
 
 # API路由
@@ -160,7 +205,7 @@ async def get_user_profile(current_user: User = Depends(get_current_user)):
     return {"username": current_user.username, "email": current_user.email, "full_name": current_user.full_name}
 
 @app.post("/api/search")
-async def search(request: SearchRequest, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user)):
+async def search(request: SearchRequest, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user_optional)):
     try:
         # 获取检索器和LLM
         retriever_instance = get_retriever()
