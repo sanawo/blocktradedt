@@ -16,7 +16,13 @@ class ZhipuAI:
         """
         self.api_key = api_key or os.getenv('ZHIPU_API_KEY', '')
         self.base_url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
-        self.model = "glm-4.5"
+        self.model = "glm-4-flash"  # 使用更快的模型
+        
+        # 打印API Key状态（仅前几位，不泄露完整key）
+        if self.api_key:
+            print(f"✅ 智谱AI已初始化，API Key: {self.api_key[:10]}...")
+        else:
+            print("⚠️  警告：ZHIPU_API_KEY 未设置")
         
     def call_api(self, messages: List[Dict[str, str]], 
                  temperature: float = 0.6, 
@@ -51,7 +57,7 @@ class ZhipuAI:
         }
         
         try:
-            response = requests.post(self.base_url, headers=headers, json=data, timeout=30)
+            response = requests.post(self.base_url, headers=headers, json=data, timeout=60)
             
             if response.status_code == 200:
                 result = response.json()
@@ -73,11 +79,16 @@ class ZhipuAI:
                 raise Exception(f"API调用失败: {response.status_code}, {response.text}")
                 
         except requests.exceptions.Timeout:
-            raise Exception("请求超时，请检查网络连接")
+            print(f"❌ API请求超时 - URL: {self.base_url}")
+            raise Exception("API请求超时（>60秒），请检查网络连接或稍后重试")
+        except requests.exceptions.ConnectionError as e:
+            print(f"❌ 连接错误: {str(e)}")
+            raise Exception("无法连接到智谱AI服务器，请检查网络或API地址")
         except requests.exceptions.RequestException as e:
+            print(f"❌ 网络请求错误: {str(e)}")
             raise Exception(f"网络请求错误: {str(e)}")
         except Exception as e:
-            print(f"API调用异常: {str(e)}")  # 调试信息
+            print(f"❌ API调用异常: {str(e)}")  # 调试信息
             raise Exception(f"API调用异常: {str(e)}")
     
     def chat(self, user_message: str, 
