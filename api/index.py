@@ -387,19 +387,22 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "title": "A股市场大宗交易活跃度创历史新高",
                 "summary": "近期A股市场大宗交易活跃度显著提升，单日成交额突破100亿元大关，显示出机构投资者对市场前景的信心增强。",
                 "url": "https://finance.sina.com.cn/stock/marketresearch/",
-                "source": "新浪财经"
+                "source": "新浪财经",
+                "image": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80"
             },
             {
                 "title": "钢材价格持续上涨，市场供需关系紧张",
                 "summary": "受供应链紧张和需求增长双重影响，近期钢材价格持续上涨，市场预期后续仍有上涨空间。",
                 "url": "https://www.eastmoney.com/",
-                "source": "东方财富网"
+                "source": "东方财富网",
+                "image": "https://images.unsplash.com/photo-1565372195458-9de0b320ef04?w=800&q=80"
             },
             {
                 "title": "有色金属板块领涨，铜价突破历史新高",
                 "summary": "有色金属板块表现强劲，铜价突破历史新高，专家建议关注相关投资机会。",
                 "url": "https://finance.qq.com/",
-                "source": "腾讯财经"
+                "source": "腾讯财经",
+                "image": "https://images.unsplash.com/photo-1639762681057-408e52192e55?w=800&q=80"
             }
         ],
         "policy": [
@@ -407,13 +410,15 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "title": "国家发改委发布大宗商品价格调控新政策",
                 "summary": "国家发改委出台新政策，加强大宗商品价格监管，维护市场秩序，促进经济稳定发展。",
                 "url": "https://www.ndrc.gov.cn/",
-                "source": "国家发改委"
+                "source": "国家发改委",
+                "image": "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&q=80"
             },
             {
                 "title": "证监会优化大宗交易制度，提升市场效率",
                 "summary": "证监会发布通知，进一步优化大宗交易制度，简化交易流程，提升市场效率。",
                 "url": "https://www.csrc.gov.cn/",
-                "source": "证监会"
+                "source": "证监会",
+                "image": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80"
             }
         ],
         "analysis": [
@@ -421,13 +426,15 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "title": "2024年大宗交易市场分析报告出炉",
                 "summary": "权威机构发布年度大宗交易市场分析报告，详细解读市场趋势，为投资者提供参考。",
                 "url": "https://www.caixin.com/",
-                "source": "财新网"
+                "source": "财新网",
+                "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80"
             },
             {
                 "title": "机构：下半年大宗商品市场将迎来结构性机会",
                 "summary": "多家研究机构预测，下半年大宗商品市场将呈现结构性分化，能源和有色金属板块值得关注。",
                 "url": "https://www.yicai.com/",
-                "source": "第一财经"
+                "source": "第一财经",
+                "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80"
             }
         ],
         "company": [
@@ -435,7 +442,8 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "title": "某龙头企业大宗交易频现，机构资金持续流入",
                 "summary": "近期某龙头企业频繁出现大宗交易，机构资金持续流入，市场关注度提升。",
                 "url": "https://www.21jingji.com/",
-                "source": "21世纪经济报道"
+                "source": "21世纪经济报道",
+                "image": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80"
             }
         ],
         "international": [
@@ -443,13 +451,15 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "title": "国际市场动荡，国内大宗商品避险需求上升",
                 "summary": "受国际市场不确定性影响，国内投资者避险情绪升温，大宗商品市场受到青睐。",
                 "url": "https://wallstreetcn.com/",
-                "source": "华尔街见闻"
+                "source": "华尔街见闻",
+                "image": "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=800&q=80"
             },
             {
                 "title": "全球供应链重构，大宗商品价格波动加剧",
                 "summary": "全球供应链正在经历深度调整，大宗商品价格波动加剧，市场不确定性增加。",
                 "url": "https://www.ftchinese.com/",
-                "source": "FT中文网"
+                "source": "FT中文网",
+                "image": "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?w=800&q=80"
             }
         ]
     }
@@ -485,7 +495,8 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
             "category": category if category != "all" else random.choice(list(news_sources.keys())),
             "views": random.randint(100, 10000),
             "tags": random.sample(tags_pool, k=random.randint(2, 4)),
-            "url": news_item_template["url"]
+            "url": news_item_template["url"],
+            "image": news_item_template.get("image", "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80")
         }
         news_list.append(news_item)
     

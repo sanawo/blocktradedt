@@ -100,15 +100,33 @@
       backdrop-filter: blur(10px);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-xl);
-      padding: 1.5rem;
+      padding: 0;
       transition: all var(--transition-base);
       cursor: pointer;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     
     .news-item-content:hover {
       transform: translateX(10px);
       box-shadow: var(--shadow-xl);
       border-color: var(--primary-color);
+    }
+    
+    .news-image {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      transition: transform var(--transition-base);
+    }
+    
+    .news-item-content:hover .news-image {
+      transform: scale(1.05);
+    }
+    
+    .news-content-body {
+      padding: 1.5rem;
     }
     
     .news-time {
@@ -191,6 +209,130 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.3; }
     }
+    
+    /* 认证模态框样式 */
+    .auth-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(5px);
+    }
+    
+    .modal-container {
+      position: relative;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-xl);
+      padding: 2.5rem;
+      max-width: 450px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-xl);
+      animation: modalSlideIn 0.3s ease-out;
+    }
+    
+    @keyframes modalSlideIn {
+      from { opacity: 0; transform: translateY(-30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .modal-close {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      background: transparent;
+      border: none;
+      font-size: 1.5rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+    
+    .modal-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+    
+    .modal-title {
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .modal-subtitle {
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+    }
+    
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+    
+    .form-group input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      color: var(--text-primary);
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+    
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .btn-block {
+      width: 100%;
+      margin-top: 1rem;
+    }
+    
+    .form-footer {
+      margin-top: 1.5rem;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+    
+    .form-footer a {
+      color: var(--primary-color);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .form-footer a:hover {
+      color: var(--accent-color);
+    }
   </style>
 </head>
 <body>
@@ -211,13 +353,71 @@
       </nav>
       
       <div class="header-actions">
-        <div class="user-profile">
+        <div class="user-profile" id="userProfile" style="cursor: pointer;">
           <div class="user-avatar">👤</div>
           <span class="username">用户</span>
         </div>
       </div>
     </div>
   </header>
+  
+  <!-- 登录/注册模态框 -->
+  <div class="auth-modal" id="authModal" style="display: none;">
+    <div class="modal-overlay" onclick="closeAuthModal()"></div>
+    <div class="modal-container">
+      <button class="modal-close" onclick="closeAuthModal()">✕</button>
+      
+      <div class="auth-form" id="loginForm">
+        <h2 class="modal-title">登录账户</h2>
+        <p class="modal-subtitle">欢迎回来！</p>
+        <form onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label>用户名</label>
+            <input type="text" id="loginUsername" placeholder="请输入用户名" required />
+          </div>
+          <div class="form-group">
+            <label>密码</label>
+            <input type="password" id="loginPassword" placeholder="请输入密码" required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">登录</button>
+        </form>
+        <div class="form-footer">
+          <p>还没有账户？ <a href="#" onclick="switchToRegister(); return false;">立即注册</a></p>
+        </div>
+      </div>
+      
+      <div class="auth-form" id="registerForm" style="display: none;">
+        <h2 class="modal-title">创建账户</h2>
+        <p class="modal-subtitle">加入我们！</p>
+        <form onsubmit="handleRegister(event)">
+          <div class="form-group">
+            <label>用户名</label>
+            <input type="text" id="registerUsername" placeholder="请输入用户名" required minlength="3" />
+          </div>
+          <div class="form-group">
+            <label>邮箱</label>
+            <input type="email" id="registerEmail" placeholder="请输入邮箱" required />
+          </div>
+          <div class="form-group">
+            <label>姓名</label>
+            <input type="text" id="registerFullName" placeholder="请输入姓名" required />
+          </div>
+          <div class="form-group">
+            <label>密码</label>
+            <input type="password" id="registerPassword" placeholder="请输入密码" required minlength="6" />
+          </div>
+          <div class="form-group">
+            <label>确认密码</label>
+            <input type="password" id="registerConfirmPassword" placeholder="请再次输入密码" required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block">注册</button>
+        </form>
+        <div class="form-footer">
+          <p>已有账户？ <a href="#" onclick="switchToLogin(); return false;">立即登录</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- 新闻页面内容 -->
   <div class="news-page">
@@ -268,6 +468,131 @@
     let currentCategory = 'all';
     let updateCountdown = 30;
     let countdownTimer = null;
+    let authToken = localStorage.getItem('authToken');
+    let currentUser = null;
+    
+    // 认证相关函数
+    function openAuthModal(type = 'login') {
+      document.getElementById('authModal').style.display = 'flex';
+      if (type === 'login') switchToLogin();
+      else switchToRegister();
+    }
+    
+    function closeAuthModal() {
+      document.getElementById('authModal').style.display = 'none';
+    }
+    
+    function switchToLogin() {
+      document.getElementById('loginForm').style.display = 'block';
+      document.getElementById('registerForm').style.display = 'none';
+    }
+    
+    function switchToRegister() {
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('registerForm').style.display = 'block';
+    }
+    
+    async function handleLogin(event) {
+      event.preventDefault();
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+      
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        if (response.ok) {
+          authToken = data.access_token;
+          localStorage.setItem('authToken', authToken);
+          currentUser = data.user;
+          updateUserProfile();
+          closeAuthModal();
+          showNotification('登录成功！', 'success');
+        } else {
+          showNotification(data.detail || '登录失败', 'error');
+        }
+      } catch (error) {
+        showNotification('网络错误，请稍后重试', 'error');
+      }
+    }
+    
+    async function handleRegister(event) {
+      event.preventDefault();
+      const username = document.getElementById('registerUsername').value;
+      const email = document.getElementById('registerEmail').value;
+      const fullName = document.getElementById('registerFullName').value;
+      const password = document.getElementById('registerPassword').value;
+      const confirmPassword = document.getElementById('registerConfirmPassword').value;
+      
+      if (password !== confirmPassword) {
+        showNotification('两次输入的密码不一致', 'error');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, email, full_name: fullName, password })
+        });
+        
+        const data = await response.json();
+        if (response.ok) {
+          showNotification('注册成功！请登录', 'success');
+          switchToLogin();
+          document.getElementById('loginUsername').value = username;
+        } else {
+          showNotification(data.detail || '注册失败', 'error');
+        }
+      } catch (error) {
+        showNotification('网络错误，请稍后重试', 'error');
+      }
+    }
+    
+    async function fetchUserProfile() {
+      try {
+        const response = await fetch('/api/user/profile', {
+          headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        if (response.ok) {
+          currentUser = await response.json();
+          updateUserProfile();
+        } else {
+          localStorage.removeItem('authToken');
+          authToken = null;
+        }
+      } catch (error) {
+        console.error('获取用户信息失败:', error);
+      }
+    }
+    
+    function updateUserProfile() {
+      const usernameElement = document.querySelector('.username');
+      if (usernameElement && currentUser) {
+        usernameElement.textContent = currentUser.username || currentUser.full_name || '用户';
+      }
+    }
+    
+    function showNotification(message, type = 'info') {
+      const notification = document.createElement('div');
+      notification.textContent = message;
+      notification.style.cssText = `
+        position: fixed; top: 100px; right: 2rem; z-index: 10001;
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white; padding: 1rem 1.5rem; border-radius: 8px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        animation: slideIn 0.3s ease-out;
+      `;
+      document.body.appendChild(notification);
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+      }, 3000);
+    }
     
     // 加载新闻
     async function loadNews(page = 1, category = 'all', append = false) {
@@ -317,20 +642,31 @@
         `<span class="news-tag">${tag}</span>`
       ).join('') : '';
       
+      const imageUrl = item.image || 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80';
+      
       return `
         <div class="news-item">
-          <div class="news-item-content" onclick="window.open('${item.url || '#'}', '_blank')">
-            <span class="news-time">${item.time || '刚刚'}</span>
-            <h3 class="news-item-title">${item.title}</h3>
-            <p class="news-item-summary">${item.summary}</p>
-            <div class="news-item-meta">
-              <span>📰 ${item.source || '未知来源'}</span>
-              <span>👁️ ${item.views || 0} 阅读</span>
+          <div class="news-item-content" onclick="openNewsDetail('${item.id}', '${item.url || '#'}')">
+            ${imageUrl ? `<img src="${imageUrl}" alt="${item.title}" class="news-image" loading="lazy" />` : ''}
+            <div class="news-content-body">
+              <span class="news-time">${item.time || '刚刚'}</span>
+              <h3 class="news-item-title">${item.title}</h3>
+              <p class="news-item-summary">${item.summary}</p>
+              <div class="news-item-meta">
+                <span>📰 ${item.source || '未知来源'}</span>
+                <span>👁️ ${item.views || 0} 阅读</span>
+              </div>
+              ${tags ? `<div class="news-item-tags">${tags}</div>` : ''}
             </div>
-            ${tags ? `<div class="news-item-tags">${tags}</div>` : ''}
           </div>
         </div>
       `;
+    }
+    
+    // 打开新闻详情
+    function openNewsDetail(newsId, url) {
+      // 如果有详情页，则在新标签打开
+      window.open(url, '_blank');
     }
     
     // 分类筛选
@@ -391,6 +727,19 @@
       initFilters();
       initLoadMore();
       startCountdown();
+      
+      // 检查登录状态
+      if (authToken) {
+        fetchUserProfile();
+      }
+      
+      // 用户头像点击事件
+      const userProfile = document.getElementById('userProfile');
+      if (userProfile) {
+        userProfile.addEventListener('click', () => {
+          if (!authToken) openAuthModal('login');
+        });
+      }
     });
   </script>
 </body>
