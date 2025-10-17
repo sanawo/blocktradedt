@@ -1172,6 +1172,28 @@ body.cursor-hover .cursor-outline {
   color: var(--primary-color);
 }
 
+/* 邮箱联系方式样式 */
+.contact-email {
+  background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  transition: all var(--transition-base);
+}
+
+.contact-email:hover {
+  background: var(--primary-color);
+  -webkit-text-fill-color: white;
+  color: white;
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
 /* ========================================
    响应式设计
    ======================================== */
