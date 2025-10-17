@@ -5,8 +5,8 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List
 
-import numpy as np
-from sentence_transformers import SentenceTransformer
+# import numpy as np  # Removed to fix deployment issues
+# from sentence_transformers import SentenceTransformer  # Removed to fix deployment issues
 
 
 class VectorStore:

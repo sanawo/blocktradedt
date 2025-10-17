@@ -5,18 +5,19 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List
 
-import numpy as np
+# import numpy as np  # Removed to fix deployment issues
 try:
     from fastembed import TextEmbedding
     FASTEMBED_AVAILABLE = True
 except ImportError:
     FASTEMBED_AVAILABLE = False
 
-try:
-    from sentence_transformers import SentenceTransformer
-    SENTENCE_TRANSFORMERS_AVAILABLE = True
-except ImportError:
-    SENTENCE_TRANSFORMERS_AVAILABLE = False
+# try:
+#     from sentence_transformers import SentenceTransformer
+#     SENTENCE_TRANSFORMERS_AVAILABLE = True
+# except ImportError:
+#     SENTENCE_TRANSFORMERS_AVAILABLE = False
+SENTENCE_TRANSFORMERS_AVAILABLE = False  # Disabled to fix deployment issues
 
 
 class VectorStore:

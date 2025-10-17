@@ -5,7 +5,7 @@ import ssl
 from pathlib import Path
 from typing import List, Dict, Any
 
-import numpy as np
+# import numpy as np  # Removed to fix deployment issues
 from fastembed import TextEmbedding
 
 # Disable SSL verification for downloading models
