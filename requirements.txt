@@ -7,7 +7,9 @@ numpy>=1.26,<3
 sentence-transformers==5.1.1
 requests==2.32.3
 python-dotenv==1.1.1
-zhipuai>=2.1.5
+beautifulsoup4==4.12.2
+pandas==2.0.3
+lxml==4.9.3
 sqlalchemy==2.0.23
 PyJWT==2.8.0
 python-multipart==0.0.9

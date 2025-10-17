@@ -10,7 +10,7 @@ from app.models import Base, User, SearchHistory
 from app.schemas import UserCreate, UserLogin, SearchRequest, ChatRequest, ChatResponse
 from app.retriever import Retriever
 from app.llm import LLM
-from app.zhipu_ai import ZhipuAI
+from app.eastmoney_scraper import EastMoneyScraper, get_eastmoney_data, format_eastmoney_data
 from app.config import Config
 import jwt
 import os
@@ -24,18 +24,8 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # 创建数据库表
 Base.metadata.create_all(bind=engine)
 
-# 初始化智谱AI（延迟初始化以避免启动时错误）
-zhipu_ai = None
-
-def get_zhipu_ai():
-    global zhipu_ai
-    if zhipu_ai is None:
-        try:
-            zhipu_ai = ZhipuAI(api_key=Config.get_zhipu_api_key())
-        except Exception as e:
-            print(f"智谱AI初始化失败: {e}")
-            zhipu_ai = None
-    return zhipu_ai
+# 初始化东方财富网爬虫
+eastmoney_scraper = EastMoneyScraper()
 
 app = FastAPI(title="Block Trade DT", description="大宗交易数据检索平台")
 
@@ -198,61 +188,128 @@ async def get_search_history(
         for item in history
     ]
 
+@app.get("/api/eastmoney/data")
+async def get_eastmoney_market_data():
+    """
+    获取东方财富网大宗交易数据
+    """
+    try:
+        # 获取原始数据
+        raw_data = get_eastmoney_data()
+        
+        # 格式化数据
+        formatted_data = format_eastmoney_data()
+        
+        return {
+            "success": True,
+            "data": formatted_data,
+            "raw_data": raw_data,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/api/eastmoney/statistics")
+async def get_eastmoney_statistics():
+    """
+    获取东方财富网市场统计数据
+    """
+    try:
+        stats = eastmoney_scraper.get_market_statistics()
+        return stats
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/api/eastmoney/stocks")
+async def get_eastmoney_active_stocks():
+    """
+    获取东方财富网活跃股票数据
+    """
+    try:
+        stocks = eastmoney_scraper.get_active_stocks()
+        return stocks
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
 @app.get("/api/trends/data")
 async def get_trends_data():
-    # 模拟实时市场数据
-    import random
-    from datetime import datetime, timedelta
-    
-    # 生成模拟的市场数据
-    market_data = {
-        "shanghai_index": round(3600 + random.uniform(-100, 100), 2),
-        "shanghai_change": round(random.uniform(-2, 2), 2),
-        "total_volume": round(random.uniform(50000, 80000), 2),
-        "premium_volume": round(random.uniform(200, 500), 2),
-        "discount_volume": round(random.uniform(45000, 75000), 2)
-    }
-    
-    # 生成模拟的每日统计数据
-    daily_stats = []
-    for i in range(30):
-        date = datetime.now() - timedelta(days=29-i)
-        daily_stats.append({
-            "date": date.strftime("%Y-%m-%d"),
-            "index": round(3600 + random.uniform(-150, 150), 2),
-            "change": round(random.uniform(-3, 3), 2),
-            "total_volume": round(random.uniform(40000, 90000), 2),
-            "premium_volume": round(random.uniform(100, 800), 2),
-            "premium_ratio": round(random.uniform(0.5, 2.5), 2),
-            "discount_volume": round(random.uniform(35000, 85000), 2),
-            "discount_ratio": round(random.uniform(97.5, 99.5), 2)
-        })
-    
-    return {
-        "market_data": market_data,
-        "daily_stats": daily_stats
-    }
+    """
+    获取趋势数据（现在使用东方财富网数据）
+    """
+    try:
+        # 尝试获取东方财富网数据
+        eastmoney_data = get_eastmoney_data()
+        if eastmoney_data.get("success"):
+            formatted_data = format_eastmoney_data()
+            if formatted_data.get("success"):
+                return formatted_data["data"]
+        
+        # 如果获取失败，使用模拟数据
+        import random
+        from datetime import datetime, timedelta
+        
+        # 生成模拟的市场数据
+        market_data = {
+            "shanghai_index": round(3600 + random.uniform(-100, 100), 2),
+            "shanghai_change": round(random.uniform(-2, 2), 2),
+            "total_volume": round(random.uniform(50000, 80000), 2),
+            "premium_volume": round(random.uniform(200, 500), 2),
+            "discount_volume": round(random.uniform(45000, 75000), 2)
+        }
+        
+        # 生成模拟的每日统计数据
+        daily_stats = []
+        for i in range(30):
+            date = datetime.now() - timedelta(days=29-i)
+            daily_stats.append({
+                "date": date.strftime("%Y-%m-%d"),
+                "index": round(3600 + random.uniform(-150, 150), 2),
+                "change": round(random.uniform(-3, 3), 2),
+                "total_volume": round(random.uniform(40000, 90000), 2),
+                "premium_volume": round(random.uniform(100, 800), 2),
+                "premium_ratio": round(random.uniform(0.5, 2.5), 2),
+                "discount_volume": round(random.uniform(35000, 85000), 2),
+                "discount_ratio": round(random.uniform(97.5, 99.5), 2)
+            })
+        
+        return {
+            "market_data": market_data,
+            "daily_stats": daily_stats
+        }
+    except Exception as e:
+        # 返回基础模拟数据
+        return {
+            "market_data": {
+                "shanghai_index": 3666.44,
+                "shanghai_change": -0.46,
+                "total_volume": 4567.89,
+                "premium_volume": 234.56,
+                "discount_volume": 4333.33
+            },
+            "daily_stats": [],
+            "error": str(e)
+        }
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_with_ai(chat_request: ChatRequest):
     """
-    与智谱AI进行对话
+    与AI进行对话（使用本地LLM）
     """
     try:
-        # 调用智谱AI
-        ai_client = get_zhipu_ai()
-        if ai_client is None:
-            return ChatResponse(
-                response="抱歉，AI服务暂时不可用",
-                timestamp=datetime.now().isoformat(),
-                success=False
-            )
-        
-        response = ai_client.chat(
-            user_message=chat_request.message,
-            system_prompt=chat_request.system_prompt,
-            conversation_history=chat_request.conversation_history
-        )
+        # 使用本地LLM进行对话
+        response = llm.generate_summary(chat_request.message, [])
         
         return ChatResponse(
             response=response,
@@ -269,15 +326,15 @@ async def chat_with_ai(chat_request: ChatRequest):
 @app.post("/api/chat/analyze")
 async def analyze_market_with_ai():
     """
-    使用智谱AI分析市场数据
+    使用AI分析市场数据
     """
     try:
         # 获取当前市场数据
         trends_data = await get_trends_data()
         market_data = trends_data["market_data"]
         
-        # 使用智谱AI分析
-        analysis = zhipu_ai.analyze_market_data(market_data)
+        # 使用本地LLM分析
+        analysis = llm.generate_summary("请分析以下市场数据", [str(market_data)])
         
         return {
             "analysis": analysis,
@@ -298,7 +355,7 @@ async def get_investment_advice(chat_request: ChatRequest):
     获取投资建议
     """
     try:
-        advice = zhipu_ai.get_investment_advice(chat_request.message)
+        advice = llm.generate_summary(f"请提供投资建议: {chat_request.message}", [])
         
         return {
             "advice": advice,

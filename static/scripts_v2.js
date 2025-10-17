@@ -428,7 +428,57 @@ function clearChat() {
 }
 
 // ========================================
-// 实时新闻加载
+// 东方财富网数据加载
+// ========================================
+
+async function loadEastMoneyData() {
+  try {
+    const response = await fetch('/api/eastmoney/data');
+    const data = await response.json();
+    
+    if (data.success && data.data) {
+      updateMarketOverview(data.data.market_overview);
+      updateHotStocks(data.data.hot_stocks);
+    }
+  } catch (error) {
+    console.error('加载东方财富网数据失败:', error);
+  }
+}
+
+function updateMarketOverview(marketData) {
+  // 更新上证指数
+  const indexValue = $('#indexValue');
+  const indexChange = $('#indexChange');
+  
+  if (indexValue && marketData.shanghai_index) {
+    indexValue.textContent = marketData.shanghai_index.toFixed(2);
+  }
+  
+  if (indexChange && marketData.shanghai_change) {
+    const change = marketData.shanghai_change;
+    indexChange.textContent = `${change > 0 ? '+' : ''}${change.toFixed(2)}%`;
+    indexChange.className = `value-change ${change >= 0 ? 'positive' : 'negative'}`;
+  }
+}
+
+function updateHotStocks(stocks) {
+  const hotStocksTable = $('#hotStocksTable');
+  if (!hotStocksTable || !stocks) return;
+  
+  hotStocksTable.innerHTML = stocks.slice(0, 10).map((stock, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${stock.code || 'N/A'}</td>
+      <td>${stock.name || 'N/A'}</td>
+      <td>${stock.price || 'N/A'}</td>
+      <td class="${stock.change && stock.change.includes('-') ? 'negative' : 'positive'}">
+        ${stock.change || 'N/A'}
+      </td>
+      <td>${stock.amount || 'N/A'}</td>
+    </tr>
+  `).join('');
+}
+
 // ========================================
 
 async function loadLatestNews() {
@@ -553,9 +603,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // 加载初始数据
   populateHotStocks();
   loadLatestNews();
+  loadEastMoneyData(); // 加载东方财富网数据
   
   // 定时更新市场数据
   setInterval(updateMarketData, 5000);
+  setInterval(loadEastMoneyData, 30000); // 每30秒更新东方财富网数据
   
   // 定时刷新新闻
   setInterval(loadLatestNews, 60000);
