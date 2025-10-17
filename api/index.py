@@ -16,7 +16,7 @@ from app.models import Base, User, SearchHistory
 from app.schemas import UserCreate, UserLogin, SearchRequest, ChatRequest, ChatResponse
 from app.retriever import Retriever
 from app.llm import LLM
-from app.zhipu_ai import ZhipuAI
+# from app.zhipu_ai import ZhipuAI  # Removed to fix deployment issues
 from app.config import Config
 import jwt
 from datetime import datetime, timedelta
@@ -34,14 +34,8 @@ Base.metadata.create_all(bind=engine)
 zhipu_ai = None
 
 def get_zhipu_ai():
-    global zhipu_ai
-    if zhipu_ai is None:
-        try:
-            zhipu_ai = ZhipuAI(api_key=Config.get_zhipu_api_key())
-        except Exception as e:
-            print(f"智谱AI初始化失败: {e}")
-            zhipu_ai = None
-    return zhipu_ai
+    # Disabled to fix deployment issues
+    return None
 
 app = FastAPI(title="Block Trade DT", description="大宗交易数据检索平台")
 

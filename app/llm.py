@@ -15,18 +15,8 @@ class LLM:
         self.api_key = api_key or os.getenv('ZHIPU_API_KEY')
         self.client = None
         
-        # 尝试初始化智谱AI客户端
-        if self.api_key:
-            try:
-                from zhipuai import ZhipuAI
-                self.client = ZhipuAI(api_key=self.api_key)
-                print("Zhipu AI client initialized successfully")
-            except ImportError:
-                print("Warning: zhipuai package not installed, using local mode")
-                self.client = None
-            except Exception as e:
-                print(f"Warning: Failed to initialize Zhipu AI client: {e}")
-                self.client = None
+        # Disabled to fix deployment issues
+        self.client = None
     
     def generate_summary(self, query: str, results: List[Dict[str, Any]]) -> str:
         """生成搜索结果摘要"""

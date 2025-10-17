@@ -48,7 +48,8 @@ class VectorStore:
             self.embedder = None
             self.embedder_type = "mock"
         elif "sentence-transformers" in self.model_name and SENTENCE_TRANSFORMERS_AVAILABLE:
-            self.embedder = SentenceTransformer(self.model_name)
+            # self.embedder = SentenceTransformer(self.model_name)  # Disabled to fix deployment issues
+            self.embedder = None
             self.embedder_type = "sentence-transformers"
         elif FASTEMBED_AVAILABLE:
             self.embedder = TextEmbedding(self.model_name)

@@ -47,7 +47,8 @@ def main() -> None:
     texts = [make_text(d) for d in docs]
 
     print(f"Loading model: {MODEL_NAME}")
-    model = SentenceTransformer(MODEL_NAME)
+    # model = SentenceTransformer(MODEL_NAME)  # Disabled to fix deployment issues
+    model = None
     
     print(f"Encoding {len(texts)} documents...")
     vectors = model.encode(texts, show_progress_bar=True)

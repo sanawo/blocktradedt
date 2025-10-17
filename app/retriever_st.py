@@ -32,7 +32,8 @@ class VectorStore:
         with self.model_name_path.open("r", encoding="utf-8") as f:
             self.model_name = f.read().strip()
 
-        self.model = SentenceTransformer(self.model_name)
+        # self.model = SentenceTransformer(self.model_name)  # Disabled to fix deployment issues
+        self.model = None
         self.embeddings_norm = self._normalize(self.embeddings)
 
     @staticmethod
