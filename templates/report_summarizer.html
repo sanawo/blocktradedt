@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>研报摘要生成器 - Block Trade DT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        .upload-section {
+            margin-bottom: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            background: #f0f2ff;
+            border-color: #764ba2;
+        }
+
+        .upload-area.dragover {
+            background: #e8ebff;
+            border-color: #764ba2;
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .text-input-area {
+            min-height: 300px;
+            width: 100%;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .text-input-area:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .char-count {
+            text-align: right;
+            color: #999;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: block;
+            margin: 20px auto;
+            font-weight: 600;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .results.active {
+            display: block;
+        }
+
+        .result-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .result-section ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .result-section li {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+
+        .result-section p {
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .metadata {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .metadata-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .metadata-icon {
+            font-size: 1.5rem;
+        }
+
+        .confidence-badge {
+            background: #4caf50;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .file-preview {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .file-preview.active {
+            display: block;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .file-size {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .main-content {
+                padding: 20px;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 研报摘要生成器</h1>
+            <p>上传5000字以内行业研报，8秒内获得结构化摘要</p>
+        </div>
+
+        <div class="main-content">
+            <div class="upload-section">
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('upload')">上传文件</button>
+                    <button class="tab" onclick="switchTab('text')">输入文本</button>
+                </div>
+
+                <div id="uploadTab" class="tab-content active">
+                    <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                        <div class="upload-icon">📄</div>
+                        <div class="upload-text">点击或拖拽文件到这里</div>
+                        <div class="upload-hint">支持 .txt, .doc, .docx 格式 (最大5000字)</div>
+                        <input type="file" id="fileInput" accept=".txt,.doc,.docx" onchange="handleFileSelect(event)">
+                    </div>
+                    <div class="file-preview" id="filePreview"></div>
+                </div>
+
+                <div id="textTab" class="tab-content">
+                    <textarea id="textInput" class="text-input-area" placeholder="请输入研报内容（5000字以内）..." maxlength="5000"></textarea>
+                    <div class="char-count">
+                        <span id="charCount">0</span> / 5000 字
+                    </div>
+                </div>
+            </div>
+
+            <button class="submit-btn" id="submitBtn" onclick="submitReport()">
+                🚀 生成摘要
+            </button>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>正在处理中，请稍候...</p>
+                <p style="color: #999; margin-top: 10px;">预计8秒内完成</p>
+            </div>
+
+            <div class="error" id="error"></div>
+
+            <div class="results" id="results">
+                <div class="metadata" id="metadata"></div>
+                <div id="summaryContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        // 标签页切换
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            
+            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(tabName === 'upload' ? 'uploadTab' : 'textTab').classList.add('active');
+        }
+
+        // 字符计数
+        document.getElementById('textInput').addEventListener('input', function() {
+            document.getElementById('charCount').textContent = this.value.length;
+        });
+
+        // 文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const preview = document.getElementById('filePreview');
+            preview.innerHTML = `
+                <div class="file-name">${file.name}</div>
+                <div class="file-size">${(file.size / 1024).toFixed(2)} KB</div>
+            `;
+            preview.classList.add('active');
+        }
+
+        // 拖放上传
+        const uploadArea = document.getElementById('uploadArea');
+        
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+            
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                document.getElementById('fileInput').files = e.dataTransfer.files;
+                handleFileSelect({target: {files: [file]}});
+            }
+        });
+
+        // 提交处理
+        async function submitReport() {
+            const uploadTab = document.getElementById('uploadTab');
+            const textTab = document.getElementById('textTab');
+            const textInput = document.getElementById('textInput');
+            const fileInput = document.getElementById('fileInput');
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            const error = document.getElementById('error');
+
+            // 重置
+            results.classList.remove('active');
+            error.classList.remove('active');
+            submitBtn.disabled = true;
+            loading.classList.add('active');
+
+            try {
+                let response;
+                const formData = new FormData();
+
+                if (uploadTab.classList.contains('active') && fileInput.files.length > 0) {
+                    // 文件上传
+                    formData.append('file', fileInput.files[0]);
+                    response = await fetch(`${API_BASE}/api/report/summarize`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                } else if (textTab.classList.contains('active')) {
+                    // 文本提交
+                    const text = textInput.value.trim();
+                    if (!text) {
+                        throw new Error('请输入研报内容');
+                    }
+                    response = await fetch(`${API_BASE}/api/report/summarize`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({report_text: text})
+                    });
+                } else {
+                    throw new Error('请选择上传文件或输入文本');
+                }
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || '生成摘要失败');
+                }
+
+                // 显示结果
+                displayResults(data);
+                
+            } catch (err) {
+                error.textContent = err.message || '发生错误，请稍后重试';
+                error.classList.add('active');
+            } finally {
+                loading.classList.remove('active');
+                submitBtn.disabled = false;
+            }
+        }
+
+        // 显示结果
+        function displayResults(data) {
+            if (!data.success || !data.summary) {
+                document.getElementById('error').textContent = '未生成摘要';
+                document.getElementById('error').classList.add('active');
+                return;
+            }
+
+            const summary = data.summary;
+            const metadata = document.getElementById('metadata');
+            const summaryContent = document.getElementById('summaryContent');
+            
+            // 元数据
+            metadata.innerHTML = `
+                <div class="metadata-item">
+                    <span class="metadata-icon">⏱️</span>
+                    <span>处理时间: ${data.processing_time}</span>
+                </div>
+                <div class="confidence-badge">
+                    置信度: ${(summary.confidence * 100).toFixed(0)}%
+                </div>
+            `;
+
+            // 摘要内容
+            let html = '';
+
+            if (summary.core_viewpoints && summary.core_viewpoints.length > 0) {
+                html += `
+                    <div class="result-section">
+                        <h3>💡 核心观点</h3>
+                        <ul>
+                            ${summary.core_viewpoints.map(vp => `<li>${vp}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            if (summary.data_support && summary.data_support.length > 0) {
+                html += `
+                    <div class="result-section">
+                        <h3>📊 数据支撑</h3>
+                        <ul>
+                            ${summary.data_support.slice(0, 10).map(item => 
+                                `<li>${item.value} ${item.type}</li>`
+                            ).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            if (summary.trend_judgment) {
+                html += `
+                    <div class="result-section">
+                        <h3>📈 趋势判断</h3>
+                        <p>${summary.trend_judgment}</p>
+                    </div>
+                `;
+            }
+
+            if (summary.key_findings && summary.key_findings.length > 0) {
+                html += `
+                    <div class="result-section">
+                        <h3>🔍 关键发现</h3>
+                        <ul>
+                            ${summary.key_findings.map(finding => `<li>${finding}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            if (summary.risk_analysis && summary.risk_analysis.length > 0) {
+                html += `
+                    <div class="result-section">
+                        <h3>⚠️ 风险分析</h3>
+                        <ul>
+                            ${summary.risk_analysis.map(risk => `<li>${risk}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            if (summary.recommendations && summary.recommendations.length > 0) {
+                html += `
+                    <div class="result-section">
+                        <h3>💼 投资建议</h3>
+                        <ul>
+                            ${summary.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            summaryContent.innerHTML = html;
+            document.getElementById('results').classList.add('active');
+            
+            // 滚动到结果
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
+

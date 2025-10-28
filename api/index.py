@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException, Depends, status
+from fastapi import FastAPI, Request, HTTPException, Depends, status, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -151,6 +151,13 @@ async def news_page(request: Request):
     if templates is None:
         return HTMLResponse("<h1>News</h1><p>模板系统未加载</p>")
     return templates.TemplateResponse("news.html", {"request": request})
+
+# 研报摘要页面
+@app.get("/report", response_class=HTMLResponse)
+async def report_summarizer_page(request: Request):
+    if templates is None:
+        return HTMLResponse("<h1>研报摘要生成器</h1><p>模板系统未加载</p>")
+    return templates.TemplateResponse("report_summarizer.html", {"request": request})
 
 # API路由
 @app.post("/api/register")
@@ -501,6 +508,51 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
         "total": len(selected_news) * 10,
         "has_more": page * limit < len(selected_news) * 10
     }
+
+# 研报摘要API
+@app.post("/api/report/summarize")
+async def summarize_report_api(report_text: Optional[str] = None, file: Optional[UploadFile] = File(None)):
+    """
+    生成研报摘要
+    支持文本上传或文件上传（5000字以内，8秒内完成）
+    """
+    from app.report_summarizer import ReportSummarizer
+    
+    try:
+        summarizer = ReportSummarizer()
+        
+        # 处理文件上传
+        if file:
+            content = await file.read()
+            report_text = content.decode('utf-8')
+        
+        if not report_text:
+            raise HTTPException(status_code=400, detail="未提供研报文本")
+        
+        # 生成摘要
+        start_time = datetime.now()
+        summary = summarizer.summarize(report_text)
+        end_time = datetime.now()
+        
+        processing_time = (end_time - start_time).total_seconds()
+        
+        # 格式化输出
+        formatted = summarizer.format_summary(summary)
+        
+        return {
+            "success": True,
+            "processing_time": f"{processing_time:.2f}秒",
+            "summary": formatted,
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    except Exception as e:
+        logger.error(f"生成摘要失败: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 # Vercel适配
 def handler(request):
