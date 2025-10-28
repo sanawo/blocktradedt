@@ -12,19 +12,23 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class EastMoneyScraper:
-    """东方财富网大宗交易数据爬虫"""
+    """东方财富网大宗交易数据爬虫 - 增强版"""
     
     def __init__(self):
         self.base_url = "https://data.eastmoney.com"
+        self.api_base = "https://datacenter-web.eastmoney.com/api/data/v1/get"
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
             'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
             'Accept-Encoding': 'gzip, deflate, br',
             'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
+            'Referer': 'https://data.eastmoney.com/',
+            'Origin': 'https://data.eastmoney.com',
         })
+        self.cache = {}
+        self.cache_ttl = 300  # 5分钟缓存
         
     def get_market_statistics(self) -> Dict[str, Any]:
         """
@@ -227,9 +231,142 @@ class EastMoneyScraper:
             logger.error(f"解析活跃股票数据失败: {str(e)}")
             return []
     
+    def get_block_trade_details(self, date: Optional[str] = None, page: int = 1, page_size: int = 50) -> Dict[str, Any]:
+        """
+        获取大宗交易明细数据（使用API）
+        """
+        try:
+            if not date:
+                date = datetime.now().strftime('%Y-%m-%d')
+            
+            cache_key = f"block_trade_{date}_{page}"
+            if cache_key in self.cache:
+                cached_data, cached_time = self.cache[cache_key]
+                if (datetime.now() - cached_time).seconds < self.cache_ttl:
+                    return cached_data
+            
+            # 尝试使用API获取数据
+            params = {
+                'sortColumns': 'TRADE_DATE',
+                'sortTypes': '-1',
+                'pageSize': str(page_size),
+                'pageNumber': str(page),
+                'reportName': 'RPT_BLOCKTRADE',
+                'columns': 'ALL',
+                'filter': f'(TRADE_DATE=\'{date}\')'
+            }
+            
+            logger.info(f"正在获取大宗交易明细: {date}")
+            response = self.session.get(self.api_base, params=params, timeout=30)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            result = {
+                "success": True,
+                "data": data.get('result', {}).get('data', []),
+                "total": data.get('result', {}).get('total', 0),
+                "date": date,
+                "timestamp": datetime.now().isoformat(),
+                "source": "东方财富网API"
+            }
+            
+            # 更新缓存
+            self.cache[cache_key] = (result, datetime.now())
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"获取大宗交易明细失败: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+    
+    def get_recent_block_trades(self, days: int = 7) -> Dict[str, Any]:
+        """
+        获取最近N天的大宗交易数据
+        """
+        try:
+            all_trades = []
+            for i in range(days):
+                date = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
+                result = self.get_block_trade_details(date, page=1, page_size=100)
+                if result.get('success') and result.get('data'):
+                    all_trades.extend(result['data'])
+            
+            return {
+                "success": True,
+                "data": all_trades,
+                "total": len(all_trades),
+                "period_days": days,
+                "timestamp": datetime.now().isoformat(),
+                "source": "东方财富网API"
+            }
+            
+        except Exception as e:
+            logger.error(f"获取最近大宗交易数据失败: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+    
+    def get_hot_stocks(self, days: int = 7) -> Dict[str, Any]:
+        """
+        获取热门股票（最近N天大宗交易最多的股票）
+        """
+        try:
+            recent_trades = self.get_recent_block_trades(days)
+            if not recent_trades.get('success'):
+                return recent_trades
+            
+            # 统计股票交易次数
+            stock_count = {}
+            for trade in recent_trades.get('data', []):
+                stock_code = trade.get('SECURITY_CODE', '')
+                stock_name = trade.get('SECURITY_NAME', '')
+                key = f"{stock_code}_{stock_name}"
+                
+                if key not in stock_count:
+                    stock_count[key] = {
+                        'code': stock_code,
+                        'name': stock_name,
+                        'count': 0,
+                        'total_amount': 0
+                    }
+                
+                stock_count[key]['count'] += 1
+                # 累加交易金额
+                try:
+                    amount = float(trade.get('TRADE_PRICE', 0)) * float(trade.get('TRADE_VOL', 0))
+                    stock_count[key]['total_amount'] += amount
+                except:
+                    pass
+            
+            # 排序
+            hot_stocks = sorted(stock_count.values(), key=lambda x: x['count'], reverse=True)[:20]
+            
+            return {
+                "success": True,
+                "data": hot_stocks,
+                "period_days": days,
+                "timestamp": datetime.now().isoformat(),
+                "source": "东方财富网API"
+            }
+            
+        except Exception as e:
+            logger.error(f"获取热门股票失败: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
+            }
+    
     def get_comprehensive_data(self) -> Dict[str, Any]:
         """
-        获取综合数据（市场统计 + 活跃股票）
+        获取综合数据（市场统计 + 活跃股票 + 最近交易 + 热门股票）
         """
         try:
             logger.info("开始获取综合数据...")
@@ -243,11 +380,19 @@ class EastMoneyScraper:
             # 获取每日明细（最近一天）
             daily_details = self.get_daily_details()
             
+            # 获取最近7天的大宗交易
+            recent_trades = self.get_recent_block_trades(days=7)
+            
+            # 获取热门股票
+            hot_stocks = self.get_hot_stocks(days=7)
+            
             return {
                 "success": True,
                 "market_statistics": market_stats,
                 "active_stocks": active_stocks,
                 "daily_details": daily_details,
+                "recent_trades": recent_trades,
+                "hot_stocks": hot_stocks,
                 "timestamp": datetime.now().isoformat(),
                 "source": "东方财富网"
             }

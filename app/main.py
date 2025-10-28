@@ -243,6 +243,51 @@ async def get_eastmoney_active_stocks():
             "timestamp": datetime.now().isoformat()
         }
 
+@app.get("/api/eastmoney/block-trades")
+async def get_block_trades(date: Optional[str] = None, page: int = 1, page_size: int = 50):
+    """
+    获取大宗交易明细数据
+    """
+    try:
+        result = eastmoney_scraper.get_block_trade_details(date, page, page_size)
+        return result
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/api/eastmoney/recent-trades")
+async def get_recent_trades(days: int = 7):
+    """
+    获取最近N天的大宗交易数据
+    """
+    try:
+        result = eastmoney_scraper.get_recent_block_trades(days)
+        return result
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/api/eastmoney/hot-stocks")
+async def get_hot_stocks(days: int = 7):
+    """
+    获取热门股票（最近N天大宗交易最多的股票）
+    """
+    try:
+        result = eastmoney_scraper.get_hot_stocks(days)
+        return result
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
 @app.get("/api/trends/data")
 async def get_trends_data():
     """
