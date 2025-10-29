@@ -69,5 +69,15 @@ class InvestmentAdviceResponse(BaseModel):
     timestamp: str
     success: bool
 
+class ReportSummarizeRequest(BaseModel):
+    report_text: Optional[str] = None
+
+class ReportSummarizeResponse(BaseModel):
+    success: bool
+    processing_time: str
+    summary: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+    timestamp: str
+
 
 

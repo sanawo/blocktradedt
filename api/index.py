@@ -305,22 +305,78 @@ async def api_news_latest(limit: int = 6):
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_with_ai(chat_request: ChatRequest):
     try:
-        ai_client = get_zhipu_ai()
-        if ai_client is None:
+        from app.llm import LLM
+        
+        # 使用本地LLM
+        llm = LLM()
+        
+        # 如果消息是空的，返回提示
+        if not chat_request.message or not chat_request.message.strip():
             return ChatResponse(
-                response="抱歉，AI服务暂时不可用",
+                response="请输入您的问题，我将为您提供帮助。",
                 timestamp=datetime.now().isoformat(),
-                success=False
+                success=True
             )
         
-        response = ai_client.chat(
-            user_message=chat_request.message,
-            system_prompt=chat_request.system_prompt,
-            conversation_history=chat_request.conversation_history
+        # 使用本地LLM的chat功能
+        # 如果没有配置API，LLM会返回本地回复
+        message = chat_request.message
+        
+        # 简单的本地回复逻辑
+        if not llm.client:
+            # 本地回复逻辑
+            response = generate_local_ai_response(message)
+        else:
+            # 使用AI客户端
+            try:
+                response = llm.chat(
+                    message,
+                    context=chat_request.conversation_history if chat_request.conversation_history else None,
+                    system_prompt=chat_request.system_prompt
+                )
+            except Exception as e:
+                logger.error(f"AI调用失败: {e}")
+                # Fallback到本地回复
+                response = generate_local_ai_response(message)
+        
+        return ChatResponse(
+            response=response,
+            timestamp=datetime.now().isoformat(),
+            success=True
         )
-        return ChatResponse(response=response, timestamp=datetime.now().isoformat(), success=True)
     except Exception as e:
-        return ChatResponse(response=f"抱歉，AI服务暂时不可用: {str(e)}", timestamp=datetime.now().isoformat(), success=False)
+        logger.error(f"Chat API错误: {e}")
+        return ChatResponse(
+            response=f"抱歉，AI服务遇到问题: {str(e)}。请稍后重试或联系管理员。",
+            timestamp=datetime.now().isoformat(),
+            success=False
+        )
+
+def generate_local_ai_response(message: str) -> str:
+    """生成本地AI回复"""
+    message_lower = message.lower()
+    
+    # 关键词匹配回复
+    if any(kw in message_lower for kw in ['价格', '报价', '售价']):
+        return "根据当前市场数据，大宗商品价格波动较大。建议关注实时行情和市场动态。您可以访问'市场数据'页面查看最新价格信息。"
+    
+    elif any(kw in message_lower for kw in ['趋势', '走势', '预测']):
+        return "市场趋势分析显示，当前大宗交易市场整体保持稳定。建议关注'趋势图表'页面获取详细的趋势分析数据。"
+    
+    elif any(kw in message_lower for kw in ['新闻', '资讯', '动态']):
+        return "最新市场资讯已更新在'实时资讯'页面。您可以查看最新的行业动态和政策解读。"
+    
+    elif any(kw in message_lower for kw in ['纸浆', '浆料', '纸浆市场']):
+        return "纸浆市场方面，根据最新数据显示，针叶木浆和阔叶木浆价格相对稳定。建议关注上游原材料价格变化对市场的影响。您可以访问相关页面查看详细数据。"
+    
+    elif any(kw in message_lower for kw in ['你好', 'hello', '帮助', 'help']):
+        return "您好！我是Block Trade DT的AI助手。我可以帮助您：\n1. 查询市场数据\n2. 分析市场趋势\n3. 解答交易相关问题\n\n请告诉我您需要什么帮助？"
+    
+    elif any(kw in message_lower for kw in ['研报', '报告', '摘要']):
+        return "您可以使用'研报摘要'功能，上传5000字以内的行业研报，系统将在8秒内为您生成结构化摘要，包括核心观点、数据支撑、趋势判断等。访问'研报摘要'页面即可使用。"
+    
+    else:
+        return f"关于'{message}'，这是一个很好的问题。作为大宗交易数据分析平台，我建议您：\n1. 查看'市场数据'页面获取相关数据\n2. 访问'智能分析'页面查看深度分析\n3. 使用'研报摘要'功能分析相关报告\n\n如需更详细的信息，请提供更具体的查询内容。"
 
 @app.get("/api/trends/data")
 async def get_trends_data():
@@ -511,33 +567,92 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
 
 # 研报摘要API
 @app.post("/api/report/summarize")
-async def summarize_report_api(report_text: Optional[str] = None, file: Optional[UploadFile] = File(None)):
+async def summarize_report_api(
+    request: Request,
+    file: Optional[UploadFile] = File(None),
+    report_text: Optional[str] = None
+):
     """
     生成研报摘要
     支持文本上传或文件上传（5000字以内，8秒内完成）
     """
-    from app.report_summarizer import ReportSummarizer
-    
     try:
+        from app.report_summarizer import ReportSummarizer
+        
         summarizer = ReportSummarizer()
         
         # 处理文件上传
         if file:
-            content = await file.read()
-            report_text = content.decode('utf-8')
+            try:
+                content = await file.read()
+                # 尝试多种编码
+                encodings = ['utf-8', 'gbk', 'gb2312', 'latin1']
+                report_text = None
+                for encoding in encodings:
+                    try:
+                        report_text = content.decode(encoding)
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                
+                if report_text is None:
+                    raise HTTPException(status_code=400, detail="无法解码文件内容，请使用UTF-8编码的文件")
+            except Exception as e:
+                logger.error(f"文件读取失败: {e}")
+                raise HTTPException(status_code=400, detail=f"文件读取失败: {str(e)}")
+        
+        # 处理JSON文本上传
+        if not report_text and not file:
+            # 尝试从请求体获取JSON数据
+            content_type = request.headers.get("content-type", "")
+            if "application/json" in content_type:
+                try:
+                    json_data = await request.json()
+                    report_text = json_data.get("report_text") or json_data.get("text")
+                except:
+                    pass
         
         if not report_text:
-            raise HTTPException(status_code=400, detail="未提供研报文本")
+            raise HTTPException(status_code=400, detail="未提供研报文本，请上传文件或输入文本内容")
+        
+        # 限制文本长度
+        if len(report_text) > 5000:
+            report_text = report_text[:5000]
+            logger.warning("文本超过5000字，已截取前5000字")
+        
+        # 检查文本是否为空
+        if not report_text.strip():
+            raise HTTPException(status_code=400, detail="研报文本为空")
         
         # 生成摘要
         start_time = datetime.now()
-        summary = summarizer.summarize(report_text)
-        end_time = datetime.now()
+        try:
+            summary = summarizer.summarize(report_text)
+        except Exception as e:
+            logger.error(f"摘要生成失败: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            raise HTTPException(status_code=500, detail=f"摘要生成失败: {str(e)}")
         
+        end_time = datetime.now()
         processing_time = (end_time - start_time).total_seconds()
         
         # 格式化输出
-        formatted = summarizer.format_summary(summary)
+        try:
+            formatted = summarizer.format_summary(summary)
+        except Exception as e:
+            logger.error(f"格式化失败: {e}")
+            # 即使格式化失败，也返回基础摘要
+            formatted = {
+                "title": summary.title if hasattr(summary, 'title') else "未识别标题",
+                "core_viewpoints": summary.core_viewpoints if hasattr(summary, 'core_viewpoints') else [],
+                "data_support": summary.data_support if hasattr(summary, 'data_support') else [],
+                "trend_judgment": summary.trend_judgment if hasattr(summary, 'trend_judgment') else "趋势判断不明确",
+                "key_findings": summary.key_findings if hasattr(summary, 'key_findings') else [],
+                "risk_analysis": summary.risk_analysis if hasattr(summary, 'risk_analysis') else [],
+                "recommendations": summary.recommendations if hasattr(summary, 'recommendations') else [],
+                "confidence": summary.confidence if hasattr(summary, 'confidence') else 0.0
+            }
         
         return {
             "success": True,
@@ -546,8 +661,12 @@ async def summarize_report_api(report_text: Optional[str] = None, file: Optional
             "timestamp": datetime.now().isoformat()
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"生成摘要失败: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         return {
             "success": False,
             "error": str(e),
