@@ -12,6 +12,8 @@ PyJWT==2.8.0
 python-multipart==0.0.9
 bcrypt==4.1.2
 numpy==1.24.3
+zai-sdk>=0.0.4  # GLM-4.5-Flash SDK
+zhipuai>=2.0.0  # 旧版SDK兼容（可选）
 # fastembed==0.0.13  # Removed - version not available
 # sentence-transformers==2.2.2  # Removed for deployment compatibility
 # torch>=2.0.0  # Removed for deployment compatibility (large size)

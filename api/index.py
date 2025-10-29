@@ -325,19 +325,23 @@ async def chat_with_ai(chat_request: ChatRequest):
         try:
             response = generate_local_ai_response(message)
             
-            # 如果配置了AI客户端，尝试使用（但确保有fallback）
+            # 如果配置了AI客户端，尝试使用GLM-4.5-Flash（但确保有fallback）
             if llm.client:
                 try:
                     ai_response = llm.chat(
                         message,
                         context=chat_request.conversation_history if chat_request.conversation_history else None,
-                        system_prompt=chat_request.system_prompt if chat_request.system_prompt else None
+                        system_prompt=chat_request.system_prompt if chat_request.system_prompt else None,
+                        enable_thinking=chat_request.enable_thinking if chat_request.enable_thinking is not None else True,
+                        stream=chat_request.stream if chat_request.stream is not None else False
                     )
                     # 只有在返回有效内容时才使用AI回复
-                    if ai_response and ai_response.strip() and "暂时不可用" not in ai_response:
+                    if ai_response and ai_response.strip() and "暂时不可用" not in ai_response and "检查API密钥" not in ai_response:
                         response = ai_response
                 except Exception as e:
                     logger.warning(f"AI客户端调用失败，使用本地回复: {e}")
+                    import traceback
+                    logger.warning(traceback.format_exc())
                     # 继续使用本地回复
         
         except Exception as e:
