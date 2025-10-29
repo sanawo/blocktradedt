@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Optional
 import os
 
 class LLM:
-    """LLM类，支持GLM-4.5-Flash和本地摘要功能"""
+    """LLM类，支持智谱AI和本地摘要功能"""
     
     def __init__(self, api_key: Optional[str] = None, model: str = "glm-4.5-flash"):
         """
@@ -21,18 +21,15 @@ class LLM:
         # 尝试初始化智谱AI客户端
         if self.api_key:
             try:
-                from zai import ZhipuAiClient
-                self.client = ZhipuAiClient(api_key=self.api_key)
+                # 使用官方zhipuai SDK
+                import zhipuai
+                self.client = zhipuai.ZhipuAI(api_key=self.api_key)
                 self.use_old_sdk = False
             except ImportError:
-                # 如果zai-sdk未安装，尝试旧版SDK
-                try:
-                    import zhipuai
-                    self.client = zhipuai.ZhipuAI(api_key=self.api_key)
-                    self.use_old_sdk = True
-                except ImportError:
-                    self.client = None
-                    self.use_old_sdk = False
+                # SDK未安装
+                print("zhipuai SDK未安装，AI功能将不可用")
+                self.client = None
+                self.use_old_sdk = False
             except Exception as e:
                 print(f"初始化AI客户端失败: {e}")
                 self.client = None
@@ -78,59 +75,37 @@ class LLM:
         return f"为您找到以下相关记录：{summary}。这些数据来源于大宗交易市场，仅供参考。"
     
     def _generate_ai_summary(self, query: str, results: List[Dict[str, Any]]) -> str:
-        """使用GLM-4.5-Flash生成摘要"""
+        """使用智谱AI生成摘要"""
         # 构建上下文信息
         context = self._build_context(query, results)
         
         try:
-            # 检查是否使用新SDK
-            if not self.use_old_sdk and hasattr(self.client, 'chat') and hasattr(self.client.chat, 'completions'):
-                # 新SDK (zai-sdk) - GLM-4.5-Flash
-                response = self.client.chat.completions.create(
-                    model=self.model,  # 使用glm-4.5-flash
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "你是一个专业的大宗交易数据分析助手。请根据用户的查询和搜索结果，生成简洁、专业的摘要。摘要应该突出关键信息，如价格趋势、地区分布、交易量等。"
-                        },
-                        {
-                            "role": "user",
-                            "content": f"用户查询：{query}\n\n搜索结果：\n{context}\n\n请生成一个简洁的摘要（100字以内）。"
-                        }
-                    ],
-                    thinking={"type": "disabled"},  # 摘要生成禁用思考模式以提高速度
-                    temperature=0.7,
-                    max_tokens=500
-                )
-                
-                # 处理响应（可能是流式或非流式）
-                if hasattr(response, 'choices') and len(response.choices) > 0:
-                    return response.choices[0].message.content
-                else:
-                    # 流式响应处理
-                    content = ""
-                    for chunk in response:
-                        if hasattr(chunk, 'choices') and chunk.choices[0].delta.content:
-                            content += chunk.choices[0].delta.content
-                    return content
-            else:
-                # 旧SDK兼容 (zhipuai)
-                response = self.client.chat.completions.create(
-                    model="glm-4-flash",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "你是一个专业的大宗交易数据分析助手。"
-                        },
-                        {
-                            "role": "user",
-                            "content": f"用户查询：{query}\n\n搜索结果：\n{context}\n\n请生成一个简洁的摘要（100字以内）。"
-                        }
-                    ],
-                    temperature=0.7,
-                    max_tokens=500
-                )
+            # 选择模型
+            model_name = "glm-4-flash" if "4.5" in self.model.lower() else self.model
+            
+            # 使用官方zhipuai SDK
+            response = self.client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "你是一个专业的大宗交易数据分析助手。请根据用户的查询和搜索结果，生成简洁、专业的摘要。摘要应该突出关键信息，如价格趋势、地区分布、交易量等。"
+                    },
+                    {
+                        "role": "user",
+                        "content": f"用户查询：{query}\n\n搜索结果：\n{context}\n\n请生成一个简洁的摘要（100字以内）。"
+                    }
+                ],
+                temperature=0.7,
+                max_tokens=500
+            )
+            
+            # 处理响应
+            if hasattr(response, 'choices') and len(response.choices) > 0:
                 return response.choices[0].message.content
+            else:
+                return "摘要生成失败，请稍后重试。"
+                
         except Exception as e:
             print(f"AI摘要生成失败: {e}")
             import traceback
@@ -164,15 +139,14 @@ class LLM:
         return "\n".join(context_parts)
     
     def chat(self, message: str, context: Optional[str] = None, system_prompt: Optional[str] = None, 
-             enable_thinking: bool = True, stream: bool = False) -> str:
+             stream: bool = False) -> str:
         """
-        AI助手对话功能 - 支持GLM-4.5-Flash
+        AI助手对话功能 - 使用智谱AI SDK
         
         Args:
             message: 用户消息
             context: 可选的上下文信息
             system_prompt: 可选的系统提示词
-            enable_thinking: 是否启用深度思考模式（默认True）
             stream: 是否使用流式输出（默认False）
             
         Returns:
@@ -203,53 +177,46 @@ class LLM:
                 "content": message
             })
             
-            # 判断任务复杂度，决定是否启用思考模式
-            simple_keywords = ['你好', 'hello', '谢谢', '再见']
-            complex_keywords = ['分析', '预测', '解释', '为什么', '如何', '建议', '策略']
+            # 使用官方zhipuai SDK
+            # 选择模型：如果模型名包含glm-4.5则使用glm-4-flash（兼容模型）
+            model_name = "glm-4-flash" if "4.5" in self.model.lower() else self.model
             
-            is_simple = any(kw in message.lower() for kw in simple_keywords)
-            is_complex = any(kw in message.lower() for kw in complex_keywords)
-            
-            # 设置思考模式
-            if enable_thinking:
-                thinking_type = "enabled" if is_complex else "disabled"
-            else:
-                thinking_type = "disabled"
-            
-            # 检查是否使用新SDK (zai-sdk)
-            if not self.use_old_sdk and hasattr(self.client, 'chat') and hasattr(self.client.chat, 'completions'):
-                # 使用GLM-4.5-Flash (新SDK)
-                call_kwargs = {
-                    "model": self.model,  # glm-4.5-flash
-                    "messages": messages,
-                    "thinking": {"type": thinking_type},
-                    "temperature": 0.7,
-                    "max_tokens": 4096
-                }
-                
+            try:
+                # 尝试使用流式输出（如果支持）
                 if stream:
-                    call_kwargs["stream"] = True
-                    # 流式输出
-                    response = self.client.chat.completions.create(**call_kwargs)
+                    response = self.client.chat.completions.create(
+                        model=model_name,
+                        messages=messages,
+                        temperature=0.7,
+                        max_tokens=4096,
+                        stream=True
+                    )
                     content = ""
                     for chunk in response:
-                        if hasattr(chunk, 'choices') and chunk.choices[0].delta.content:
-                            content += chunk.choices[0].delta.content
-                    return content
+                        if hasattr(chunk, 'choices') and len(chunk.choices) > 0:
+                            delta = chunk.choices[0].delta
+                            if hasattr(delta, 'content') and delta.content:
+                                content += delta.content
+                    return content if content else "抱歉，未收到有效回复。"
                 else:
                     # 非流式输出
-                    response = self.client.chat.completions.create(**call_kwargs)
+                    response = self.client.chat.completions.create(
+                        model=model_name,
+                        messages=messages,
+                        temperature=0.7,
+                        max_tokens=4096
+                    )
                     if hasattr(response, 'choices') and len(response.choices) > 0:
                         return response.choices[0].message.content
                     else:
                         return "抱歉，未收到有效回复。"
-            else:
-                # 旧SDK兼容 (zhipuai)
+            except AttributeError:
+                # 如果API接口不同，尝试兼容调用
                 response = self.client.chat.completions.create(
-                    model="glm-4-flash",
+                    model=model_name,
                     messages=messages,
                     temperature=0.7,
-                    max_tokens=1000
+                    max_tokens=4096
                 )
                 return response.choices[0].message.content
                 

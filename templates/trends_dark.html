@@ -303,6 +303,182 @@
       to { transform: rotate(360deg); }
     }
 
+    /* 大宗交易表格样式 */
+    .dzjy-table-section {
+      margin-top: 40px;
+    }
+
+    .table-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 24px;
+      overflow: hidden;
+    }
+
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .table-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .table-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .data-source {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .refresh-btn {
+      padding: 8px 16px;
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.3s;
+    }
+
+    .refresh-btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-2px);
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    .dzjy-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    .dzjy-table thead {
+      position: sticky;
+      top: 0;
+      background: var(--bg-card);
+      z-index: 10;
+    }
+
+    .dzjy-table th {
+      padding: 12px;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-primary);
+      border-bottom: 2px solid var(--border-color);
+      background: var(--bg-card);
+      white-space: nowrap;
+    }
+
+    .dzjy-table td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-secondary);
+    }
+
+    .dzjy-table tbody tr:hover {
+      background: rgba(59, 130, 246, 0.05);
+      cursor: pointer;
+    }
+
+    .dzjy-table tbody tr:nth-child(even) {
+      background: rgba(148, 163, 184, 0.05);
+    }
+
+    .loading-cell {
+      text-align: center;
+      padding: 40px !important;
+    }
+
+    .table-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--text-secondary);
+    }
+
+    .table-loading::before {
+      content: '';
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border-color);
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .table-footer {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .table-pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .page-btn {
+      padding: 8px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.3s;
+    }
+
+    .page-btn:hover:not(:disabled) {
+      background: var(--primary-color);
+      color: white;
+      border-color: var(--primary-color);
+    }
+
+    .page-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .page-info {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .positive {
+      color: #10b981;
+    }
+
+    .negative {
+      color: #ef4444;
+    }
+
+    .neutral {
+      color: var(--text-secondary);
+    }
+
     @media (max-width: 768px) {
       .trends-container {
         padding: 80px 15px 30px;
@@ -460,6 +636,55 @@
       </div>
     </div>
 
+    <!-- 大宗交易详细数据表格 -->
+    <div class="dzjy-table-section">
+      <div class="table-card">
+        <div class="table-header">
+          <h3 class="table-title">📊 大宗交易数据</h3>
+          <div class="table-controls">
+            <span class="data-source" id="dataSource">数据来源: 同花顺</span>
+            <button class="refresh-btn" onclick="loadDzjyData()">🔄 刷新</button>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table class="dzjy-table" id="dzjyTable">
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>股票代码</th>
+                <th>股票简称</th>
+                <th>收盘价</th>
+                <th>成交价</th>
+                <th>成交量(万股)</th>
+                <th>折溢价比率</th>
+                <th>成交金额(万元)</th>
+                <th>买入营业部</th>
+                <th>卖出营业部</th>
+              </tr>
+            </thead>
+            <tbody id="dzjyTableBody">
+              <tr>
+                <td colspan="10" class="loading-cell">
+                  <div class="table-loading">
+                    <span>正在加载数据...</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <div class="table-pagination">
+            <button class="page-btn" onclick="changePage(-1)" id="prevBtn">上一页</button>
+            <span class="page-info">
+              第 <span id="currentPage">1</span> 页 / 共 <span id="totalPages">1</span> 页
+            </span>
+            <button class="page-btn" onclick="changePage(1)" id="nextBtn">下一页</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 自动刷新提示 -->
     <div class="auto-refresh">
       <span class="refresh-icon">🔄</span>
@@ -609,13 +834,125 @@
       }).join('');
     }
 
+    // 大宗交易数据相关
+    let currentPage = 1;
+    let dzjyData = [];
+
+    // 加载大宗交易数据
+    async function loadDzjyData(page = 1) {
+      try {
+        const tbody = document.getElementById('dzjyTableBody');
+        tbody.innerHTML = '<tr><td colspan="10" class="loading-cell"><div class="table-loading"><span>正在加载数据...</span></div></td></tr>';
+        
+        const response = await fetch(`/api/ths/dzjy?page=${page}`);
+        const result = await response.json();
+
+        if (result.success && result.data && result.data.length > 0) {
+          dzjyData = result.data;
+          currentPage = page;
+          
+          // 更新数据源显示
+          if (result.source) {
+            document.getElementById('dataSource').textContent = `数据来源: ${result.source}`;
+          }
+          
+          // 渲染表格
+          renderDzjyTable(dzjyData);
+          
+          // 更新分页信息
+          updatePagination();
+        } else {
+          // 如果同花顺数据获取失败，尝试获取热门股票数据
+          const popularResponse = await fetch(`/api/ths/popular?limit=50`);
+          const popularResult = await popularResponse.json();
+          
+          if (popularResult.success && popularResult.data && popularResult.data.length > 0) {
+            dzjyData = popularResult.data.map(stock => ({
+              date: stock.date || new Date().toISOString().split('T')[0],
+              code: stock.code,
+              name: stock.name,
+              close_price: stock.latest_price,
+              trade_price: stock.trade_price,
+              volume: stock.volume,
+              discount_rate: stock.change_percent,
+              amount: stock.amount,
+              buy_broker: '--',
+              sell_broker: '--'
+            }));
+            
+            renderDzjyTable(dzjyData);
+            updatePagination();
+            
+            document.getElementById('dataSource').textContent = `数据来源: ${popularResult.source || '同花顺'}`;
+          } else {
+            tbody.innerHTML = '<tr><td colspan="10" class="loading-cell"><div style="color: var(--text-secondary);">暂无数据</div></td></tr>';
+          }
+        }
+      } catch (error) {
+        console.error('加载大宗交易数据失败:', error);
+        const tbody = document.getElementById('dzjyTableBody');
+        tbody.innerHTML = '<tr><td colspan="10" class="loading-cell"><div style="color: #ef4444;">加载失败，请稍后重试</div></td></tr>';
+      }
+    }
+
+    // 渲染大宗交易表格
+    function renderDzjyTable(data) {
+      const tbody = document.getElementById('dzjyTableBody');
+      
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="loading-cell"><div style="color: var(--text-secondary);">暂无数据</div></td></tr>';
+        return;
+      }
+      
+      tbody.innerHTML = data.map(item => {
+        const discountRate = item.discount_rate || 0;
+        const discountClass = discountRate > 0 ? 'positive' : discountRate < 0 ? 'negative' : 'neutral';
+        const discountSign = discountRate >= 0 ? '+' : '';
+        
+        return `
+          <tr>
+            <td>${item.date || '--'}</td>
+            <td><strong>${item.code || '--'}</strong></td>
+            <td>${item.name || '--'}</td>
+            <td>${item.close_price ? item.close_price.toFixed(2) : '--'}</td>
+            <td>${item.trade_price ? item.trade_price.toFixed(2) : '--'}</td>
+            <td>${item.volume ? item.volume.toFixed(2) : '--'}</td>
+            <td class="${discountClass}">${discountSign}${discountRate.toFixed(2)}%</td>
+            <td>${item.amount ? item.amount.toFixed(2) : '--'}</td>
+            <td title="${item.buy_broker || '--'}">${(item.buy_broker || '--').length > 15 ? (item.buy_broker || '--').substring(0, 15) + '...' : (item.buy_broker || '--')}</td>
+            <td title="${item.sell_broker || '--'}">${(item.sell_broker || '--').length > 15 ? (item.sell_broker || '--').substring(0, 15) + '...' : (item.sell_broker || '--')}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // 更新分页信息
+    function updatePagination() {
+      const totalPages = Math.max(1, Math.ceil(dzjyData.length / 50));
+      document.getElementById('currentPage').textContent = currentPage;
+      document.getElementById('totalPages').textContent = totalPages;
+      
+      document.getElementById('prevBtn').disabled = currentPage <= 1;
+      document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+    }
+
+    // 切换页码
+    function changePage(delta) {
+      const newPage = currentPage + delta;
+      if (newPage >= 1) {
+        loadDzjyData(newPage);
+      }
+    }
+
     // 初始化
     document.addEventListener('DOMContentLoaded', () => {
       initCharts();
       loadTrendsData();
+      loadDzjyData(); // 加载大宗交易数据
 
       // 每30秒更新一次
       setInterval(loadTrendsData, 30000);
+      setInterval(() => loadDzjyData(currentPage), 60000); // 每60秒更新一次大宗交易数据
 
       // 时间按钮切换
       document.querySelectorAll('.time-btn').forEach(btn => {

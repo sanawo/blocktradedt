@@ -503,56 +503,215 @@ async def get_investment_advice(chat_request: ChatRequest):
 
 @app.get("/api/trends/data")
 async def get_trends_data():
-    # 模拟实时市场数据
-    import random
-    from datetime import timedelta
-    
-    # 生成24小时时间标签
-    time_labels = []
-    current_time = datetime.now()
-    for i in range(24):
-        time = current_time - timedelta(hours=23-i)
-        time_labels.append(time.strftime("%H:%M"))
-    
-    # 生成模拟的统计数据
-    stats = {
-        "total_volume": round(random.uniform(50, 100), 2),
-        "total_transactions": random.randint(100, 500),
-        "avg_price": round(random.uniform(-2, 2), 2),
-        "active_sellers": random.randint(50, 150)
-    }
-    
-    # 生成交易量和价格趋势数据
-    transaction_volumes = [random.randint(50, 200) for _ in range(24)]
-    price_trends = [round(3600 + random.uniform(-50, 50), 2) for _ in range(24)]
-    
-    # 生成类别排行
-    categories = [
-        {"name": "钢材", "count": random.randint(100, 300), "change": round(random.uniform(-10, 20), 1)},
-        {"name": "有色金属", "count": random.randint(80, 250), "change": round(random.uniform(-10, 20), 1)},
-        {"name": "能源化工", "count": random.randint(60, 200), "change": round(random.uniform(-10, 20), 1)},
-        {"name": "农产品", "count": random.randint(40, 150), "change": round(random.uniform(-10, 20), 1)},
-        {"name": "建材", "count": random.randint(30, 120), "change": round(random.uniform(-10, 20), 1)}
-    ]
-    
-    # 生成地区排行
-    regions = [
-        {"name": "华东", "count": random.randint(200, 400), "percentage": round(random.uniform(25, 35), 1), "change": round(random.uniform(-5, 15), 1)},
-        {"name": "华北", "count": random.randint(150, 350), "percentage": round(random.uniform(20, 30), 1), "change": round(random.uniform(-5, 15), 1)},
-        {"name": "华南", "count": random.randint(100, 300), "percentage": round(random.uniform(15, 25), 1), "change": round(random.uniform(-5, 15), 1)},
-        {"name": "西南", "count": random.randint(80, 200), "percentage": round(random.uniform(10, 20), 1), "change": round(random.uniform(-5, 15), 1)},
-        {"name": "东北", "count": random.randint(50, 150), "percentage": round(random.uniform(5, 15), 1), "change": round(random.uniform(-5, 15), 1)}
-    ]
-    
-    return {
-        "stats": stats,
-        "time_labels": time_labels,
-        "transaction_volumes": transaction_volumes,
-        "price_trends": price_trends,
-        "categories": categories,
-        "regions": regions,
-        "last_update": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
+    """获取趋势图表数据，优先使用真实数据，失败则使用模拟数据"""
+    try:
+        # 尝试获取同花顺真实数据
+        from app.ths_scraper import get_ths_popular_stocks, get_ths_market_overview, get_ths_daily_statistics
+        
+        # 获取市场概览
+        overview = get_ths_market_overview()
+        
+        # 获取热门股票排行
+        popular_stocks = get_ths_popular_stocks(limit=10)
+        
+        # 获取最近30天的统计数据
+        daily_stats = get_ths_daily_statistics(days=30)
+        
+        if overview and popular_stocks:
+            # 使用真实数据
+            import random
+            from datetime import timedelta
+            
+            # 生成24小时时间标签
+            time_labels = []
+            current_time = datetime.now()
+            for i in range(24):
+                time = current_time - timedelta(hours=23-i)
+                time_labels.append(time.strftime("%H:%M"))
+            
+            # 使用真实市场数据
+            stats = {
+                "total_volume": overview.get('total_volume', 0),
+                "total_transactions": overview.get('deal_count', 0),
+                "total_amount": overview.get('total_amount', 0),
+                "premium_ratio": overview.get('premium_ratio', 0),
+                "active_sellers": len(set([stock.get('code', '') for stock in popular_stocks]))
+            }
+            
+            # 从每日统计生成趋势数据
+            if daily_stats:
+                # 最近24小时的数据（如果不足24小时，用模拟数据补充）
+                transaction_volumes = []
+                price_trends = []
+                
+                for i in range(24):
+                    if i < len(daily_stats):
+                        transaction_volumes.append(int(daily_stats[i].get('deal_count', 0)))
+                        price_trends.append(round(daily_stats[i].get('total_amount', 0) / max(daily_stats[i].get('deal_count', 1), 1), 2))
+                    else:
+                        # 用平均值的波动补充
+                        avg_volume = sum(transaction_volumes) / len(transaction_volumes) if transaction_volumes else 0
+                        avg_price = sum(price_trends) / len(price_trends) if price_trends else 3600
+                        transaction_volumes.append(int(avg_volume + random.uniform(-10, 10)))
+                        price_trends.append(round(avg_price + random.uniform(-50, 50), 2))
+            else:
+                # 如果没有统计图，生成模拟数据
+                transaction_volumes = [random.randint(50, 200) for _ in range(24)]
+                price_trends = [round(3600 + random.uniform(-50, 50), 2) for _ in range(24)]
+            
+            # 根据热门股票生成类别排行（简单映射）
+            categories = []
+            if popular_stocks:
+                # 按照成交金额分类
+                categories = [
+                    {
+                        "name": stock.get('name', ''),
+                        "count": int(stock.get('amount', 0)),
+                        "change": round(stock.get('change_percent', 0), 1)
+                    }
+                    for stock in popular_stocks[:5]
+                ]
+            
+            # 生成地区排行（模拟，因为同花顺数据中没有地区信息）
+            import random
+            regions = [
+                {"name": "华东", "count": random.randint(200, 400), "percentage": round(random.uniform(25, 35), 1), "change": round(random.uniform(-5, 15), 1)},
+                {"name": "华北", "count": random.randint(150, 350), "percentage": round(random.uniform(20, 30), 1), "change": round(random.uniform(-5, 15), 1)},
+                {"name": "华南", "count": random.randint(100, 300), "percentage": round(random.uniform(15, 25), 1), "change": round(random.uniform(-5, 15), 1)},
+                {"name": "西南", "count": random.randint(80, 200), "percentage": round(random.uniform(10, 20), 1), "change": round(random.uniform(-5, 15), 1)},
+                {"name": "东北", "count": random.randint(50, 150), "percentage": round(random.uniform(5, 15), 1), "change": round(random.uniform(-5, 15), 1)}
+            ]
+            
+            return {
+                "stats": stats,
+                "time_labels": time_labels,
+                "transaction_volumes": transaction_volumes,
+                "price_trends": price_trends,
+                "categories": categories,
+                "regions": regions,
+                "popular_stocks": popular_stocks,
+                "last_update": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "data_source": "同花顺"
+            }
+    except Exception as e:
+        logger.warning(f"获取真实数据失败，使用模拟数据: {e}")
+        # 失败则使用模拟数据（原有逻辑）
+        import random
+        from datetime import timedelta
+        
+        # 生成24小时时间标签
+        time_labels = []
+        current_time = datetime.now()
+        for i in range(24):
+            time = current_time - timedelta(hours=23-i)
+            time_labels.append(time.strftime("%H:%M"))
+        
+        # 生成模拟的统计数据
+        stats = {
+            "total_volume": round(random.uniform(50, 100), 2),
+            "total_transactions": random.randint(100, 500),
+            "avg_price": round(random.uniform(-2, 2), 2),
+            "active_sellers": random.randint(50, 150)
+        }
+        
+        # 生成交易量和价格趋势数据
+        transaction_volumes = [random.randint(50, 200) for _ in range(24)]
+        price_trends = [round(3600 + random.uniform(-50, 50), 2) for _ in range(24)]
+        
+        # 生成类别排行
+        categories = [
+            {"name": "钢材", "count": random.randint(100, 300), "change": round(random.uniform(-10, 20), 1)},
+            {"name": "有色金属", "count": random.randint(80, 250), "change": round(random.uniform(-10, 20), 1)},
+            {"name": "能源化工", "count": random.randint(60, 200), "change": round(random.uniform(-10, 20), 1)},
+            {"name": "农产品", "count": random.randint(40, 150), "change": round(random.uniform(-10, 20), 1)},
+            {"name": "建材", "count": random.randint(30, 120), "change": round(random.uniform(-10, 20), 1)}
+        ]
+        
+        # 生成地区排行
+        regions = [
+            {"name": "华东", "count": random.randint(200, 400), "percentage": round(random.uniform(25, 35), 1), "change": round(random.uniform(-5, 15), 1)},
+            {"name": "华北", "count": random.randint(150, 350), "percentage": round(random.uniform(20, 30), 1), "change": round(random.uniform(-5, 15), 1)},
+            {"name": "华南", "count": random.randint(100, 300), "percentage": round(random.uniform(15, 25), 1), "change": round(random.uniform(-5, 15), 1)},
+            {"name": "西南", "count": random.randint(80, 200), "percentage": round(random.uniform(10, 20), 1), "change": round(random.uniform(-5, 15), 1)},
+            {"name": "东北", "count": random.randint(50, 150), "percentage": round(random.uniform(5, 15), 1), "change": round(random.uniform(-5, 15), 1)}
+        ]
+        
+        return {
+            "stats": stats,
+            "time_labels": time_labels,
+            "transaction_volumes": transaction_volumes,
+            "price_trends": price_trends,
+            "categories": categories,
+            "regions": regions,
+            "last_update": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "data_source": "模拟数据"
+        }
+
+@app.get("/api/ths/dzjy")
+async def get_ths_dzjy_data(page: int = 1, date: Optional[str] = None):
+    """
+    获取同花顺大宗交易详细数据
+    """
+    try:
+        from app.ths_scraper import get_ths_dzjy_data as fetch_ths_data
+        
+        result = fetch_ths_data(page=page, date=date)
+        return result
+    except Exception as e:
+        logger.error(f"获取同花顺大宗交易数据失败: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/api/ths/popular")
+async def get_ths_popular_stocks(limit: int = 20):
+    """
+    获取同花顺热门交易股票排行
+    """
+    try:
+        from app.ths_scraper import get_ths_popular_stocks as fetch_popular
+        
+        stocks = fetch_popular(limit=limit)
+        return {
+            "success": True,
+            "data": stocks,
+            "timestamp": datetime.now().isoformat(),
+            "source": "同花顺"
+        }
+    except Exception as e:
+        logger.error(f"获取热门股票失败: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "data": [],
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/api/ths/overview")
+async def get_ths_market_overview():
+    """
+    获取同花顺市场概览数据
+    """
+    try:
+        from app.ths_scraper import get_ths_market_overview as fetch_overview
+        
+        overview = fetch_overview()
+        return {
+            "success": True,
+            "data": overview,
+            "timestamp": datetime.now().isoformat(),
+            "source": "同花顺"
+        }
+    except Exception as e:
+        logger.error(f"获取市场概览失败: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "data": {},
+            "timestamp": datetime.now().isoformat()
+        }
 
 @app.get("/api/news")
 async def api_news(page: int = 1, category: str = "all", limit: int = 20):
