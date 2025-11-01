@@ -479,6 +479,37 @@
       color: var(--text-secondary);
     }
 
+    /* 加载动画 */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(59, 130, 246, 0.2);
+      border-top-color: var(--primary-color);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .loading-text {
+      margin-top: 20px;
+      color: var(--text-primary);
+      font-size: 1.1rem;
+    }
+
     @media (max-width: 768px) {
       .trends-container {
         padding: 80px 15px 30px;
@@ -943,9 +974,27 @@
       });
     }
 
+    let isLoadingTrends = false;
+    let isLoadingDzjy = false;
+
     async function loadTrendsData(applyCurrent = true) {
+      // 防止重复请求
+      if (isLoadingTrends) {
+        console.log('趋势数据正在加载中，跳过重复请求');
+        return;
+      }
+      
+      isLoadingTrends = true;
       try {
+        // 显示加载状态
+        if (applyCurrent) {
+          document.getElementById('loadingOverlay').style.display = 'flex';
+        }
+        
         const response = await fetch('/api/trends/data');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
         trendData = data;
 
@@ -970,6 +1019,15 @@
         }
       } catch (error) {
         console.error('加载数据失败:', error);
+        // 显示错误提示
+        const lastUpdateEl = document.getElementById('lastUpdateTime');
+        if (lastUpdateEl) {
+          lastUpdateEl.textContent = '数据加载失败，请刷新重试';
+          lastUpdateEl.style.color = '#ef4444';
+        }
+      } finally {
+        isLoadingTrends = false;
+        document.getElementById('loadingOverlay').style.display = 'none';
       }
     }
 
@@ -977,12 +1035,33 @@
     let dzjyData = [];
 
     async function loadDzjyData(page = 1) {
+      // 防止重复请求
+      if (isLoadingDzjy) {
+        console.log('大宗交易数据正在加载中，跳过重复请求');
+        return;
+      }
+      
+      isLoadingDzjy = true;
       try {
         const tbody = document.getElementById('dzjyTableBody');
         tbody.innerHTML = '<tr><td colspan="10" class="loading-cell"><div class="table-loading"><span>正在加载数据...</span></div></td></tr>';
 
+        const startTime = Date.now();
         const response = await fetch(`/api/ths/dzjy?page=${page}`);
+        const loadTime = Date.now() - startTime;
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const result = await response.json();
+        
+        // 如果加载时间很短，说明使用了缓存
+        if (loadTime < 500) {
+          console.log(`数据加载完成（使用缓存，耗时${loadTime}ms）`);
+        } else {
+          console.log(`数据加载完成（耗时${loadTime}ms）`);
+        }
 
         if (result.success && result.data && result.data.length > 0) {
           dzjyData = result.data;
@@ -1024,6 +1103,8 @@
         console.error('加载大宗交易数据失败:', error);
         const tbody = document.getElementById('dzjyTableBody');
         tbody.innerHTML = '<tr><td colspan="10" class="loading-cell"><div style="color: #ef4444;">加载失败，请稍后重试</div></td></tr>';
+      } finally {
+        isLoadingDzjy = false;
       }
     }
 
@@ -1075,8 +1156,14 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       initCharts();
-      loadTrendsData(true);
-      loadDzjyData();
+      
+      // 并行加载数据，提升加载速度
+      Promise.all([
+        loadTrendsData(true),
+        loadDzjyData()
+      ]).catch(err => {
+        console.error('初始数据加载失败:', err);
+      });
 
       document.querySelectorAll('.time-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1086,14 +1173,21 @@
         });
       });
 
+      // 减少自动刷新频率，避免频繁请求
       setInterval(() => {
-        loadTrendsData(false).then(() => {
-          applyPeriod(currentPeriod);
-          syncTimeButtons(currentPeriod);
-        });
-      }, 30000);
+        if (!isLoadingTrends) {
+          loadTrendsData(false).then(() => {
+            applyPeriod(currentPeriod);
+            syncTimeButtons(currentPeriod);
+          });
+        }
+      }, 60000); // 改为60秒刷新一次
 
-      setInterval(() => loadDzjyData(currentPage), 60000);
+      setInterval(() => {
+        if (!isLoadingDzjy) {
+          loadDzjyData(currentPage);
+        }
+      }, 120000); // 大宗交易数据2分钟刷新一次
     });
   </script>
 </body>
