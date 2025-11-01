@@ -505,139 +505,286 @@ async def get_investment_advice(chat_request: ChatRequest):
 async def get_trends_data():
     """获取趋势图表数据，优先使用真实数据，失败则使用模拟数据"""
     try:
-        # 尝试获取同花顺真实数据
-        from app.ths_scraper import get_ths_popular_stocks, get_ths_market_overview, get_ths_daily_statistics
-        
-        # 获取市场概览
-        overview = get_ths_market_overview()
-        
-        # 获取热门股票排行
-        popular_stocks = get_ths_popular_stocks(limit=10)
-        
-        # 获取最近30天的统计数据
-        daily_stats = get_ths_daily_statistics(days=30)
-        
-        if overview and popular_stocks:
-            # 使用真实数据
-            import random
-            from datetime import timedelta
-            
-            # 生成24小时时间标签
-            time_labels = []
-            current_time = datetime.now()
-            for i in range(24):
-                time = current_time - timedelta(hours=23-i)
-                time_labels.append(time.strftime("%H:%M"))
-            
-            # 使用真实市场数据
-            stats = {
-                "total_volume": overview.get('total_volume', 0),
-                "total_transactions": overview.get('deal_count', 0),
-                "total_amount": overview.get('total_amount', 0),
-                "premium_ratio": overview.get('premium_ratio', 0),
-                "active_sellers": len(set([stock.get('code', '') for stock in popular_stocks]))
-            }
-            
-            # 从每日统计生成趋势数据
-            if daily_stats:
-                # 最近24小时的数据（如果不足24小时，用模拟数据补充）
-                transaction_volumes = []
-                price_trends = []
-                
-                for i in range(24):
-                    if i < len(daily_stats):
-                        transaction_volumes.append(int(daily_stats[i].get('deal_count', 0)))
-                        price_trends.append(round(daily_stats[i].get('total_amount', 0) / max(daily_stats[i].get('deal_count', 1), 1), 2))
-                    else:
-                        # 用平均值的波动补充
-                        avg_volume = sum(transaction_volumes) / len(transaction_volumes) if transaction_volumes else 0
-                        avg_price = sum(price_trends) / len(price_trends) if price_trends else 3600
-                        transaction_volumes.append(int(avg_volume + random.uniform(-10, 10)))
-                        price_trends.append(round(avg_price + random.uniform(-50, 50), 2))
-            else:
-                # 如果没有统计图，生成模拟数据
-                transaction_volumes = [random.randint(50, 200) for _ in range(24)]
-                price_trends = [round(3600 + random.uniform(-50, 50), 2) for _ in range(24)]
-            
-            # 根据热门股票生成类别排行（简单映射）
-            categories = []
-            if popular_stocks:
-                # 按照成交金额分类
-                categories = [
-                    {
-                        "name": stock.get('name', ''),
-                        "count": int(stock.get('amount', 0)),
-                        "change": round(stock.get('change_percent', 0), 1)
-                    }
-                    for stock in popular_stocks[:5]
-                ]
-            
-            # 生成地区排行（模拟，因为同花顺数据中没有地区信息）
-            import random
-            regions = [
-                {"name": "华东", "count": random.randint(200, 400), "percentage": round(random.uniform(25, 35), 1), "change": round(random.uniform(-5, 15), 1)},
-                {"name": "华北", "count": random.randint(150, 350), "percentage": round(random.uniform(20, 30), 1), "change": round(random.uniform(-5, 15), 1)},
-                {"name": "华南", "count": random.randint(100, 300), "percentage": round(random.uniform(15, 25), 1), "change": round(random.uniform(-5, 15), 1)},
-                {"name": "西南", "count": random.randint(80, 200), "percentage": round(random.uniform(10, 20), 1), "change": round(random.uniform(-5, 15), 1)},
-                {"name": "东北", "count": random.randint(50, 150), "percentage": round(random.uniform(5, 15), 1), "change": round(random.uniform(-5, 15), 1)}
+        from collections import defaultdict
+        from app.ths_scraper import (
+            get_ths_popular_stocks,
+            get_ths_daily_statistics,
+            get_ths_dzjy_data,
+        )
+
+        def percent_change(current: float, previous: Optional[float]) -> float:
+            if previous in (None, 0):
+                return 0.0
+            try:
+                return round((current - previous) / previous * 100, 2)
+            except ZeroDivisionError:
+                return 0.0
+
+        def build_series(items, key: str, window: Optional[int] = None):
+            if not items:
+                return [], []
+            subset = items[-window:] if window else items
+            labels = [item.get("date", "") for item in subset]
+            values = [round(float(item.get(key, 0) or 0), 2) for item in subset]
+            return labels, values
+
+        def build_price_series(items, window: Optional[int] = None):
+            if not items:
+                return [], []
+            subset = items[-window:] if window else items
+            labels = [item.get("date", "") for item in subset]
+            values = []
+            last_price = 0.0
+            for item in subset:
+                total_volume = float(item.get("total_volume", 0) or 0)
+                total_amount = float(item.get("total_amount", 0) or 0)
+                if total_volume > 0:
+                    avg_price = round(total_amount / total_volume, 2)
+                    last_price = avg_price
+                else:
+                    avg_price = last_price
+                values.append(avg_price)
+            return labels, values
+
+        def build_intraday_series(trades_list):
+            labels = [f"{hour:02d}:00" for hour in range(24)]
+            if not trades_list:
+                return labels, [0.0] * 24, [0.0] * 24
+            total = len(trades_list)
+            volumes = [0.0] * 24
+            amounts = [0.0] * 24
+            for idx, trade in enumerate(trades_list):
+                volume = float(trade.get("volume", 0) or 0)
+                price = float(trade.get("trade_price", 0) or 0)
+                bucket = min(23, int(idx / total * 24))
+                volumes[bucket] += volume
+                amounts[bucket] += volume * price
+            prices = []
+            last_price = float(trades_list[0].get("trade_price", 0) or 0)
+            for vol, amount in zip(volumes, amounts):
+                if vol > 0:
+                    avg = round(amount / vol, 2)
+                    last_price = avg
+                else:
+                    avg = last_price
+                prices.append(avg)
+            return labels, [round(v, 2) for v in volumes], prices
+
+        def build_hot_stocks(trades_list):
+            sorted_trades = sorted(
+                trades_list,
+                key=lambda item: float(item.get("amount", 0) or 0),
+                reverse=True,
+            )
+            hot = []
+            for trade in sorted_trades[:5]:
+                hot.append({
+                    "name": trade.get("name", "--"),
+                    "code": trade.get("code", "--"),
+                    "amount": round(float(trade.get("amount", 0) or 0), 2),
+                    "volume": round(float(trade.get("volume", 0) or 0), 2),
+                    "discount_rate": round(float(trade.get("discount_rate", 0) or 0), 2)
+                })
+            return hot
+
+        def build_broker_rankings(trades_list):
+            broker_map = defaultdict(lambda: {"amount": 0.0, "count": 0})
+            for trade in trades_list:
+                broker = trade.get("buy_broker") or "未知营业部"
+                broker_map[broker]["amount"] += float(trade.get("amount", 0) or 0)
+                broker_map[broker]["count"] += 1
+            ranking = [
+                {
+                    "name": broker,
+                    "count": info["count"],
+                    "amount": round(info["amount"], 2)
+                }
+                for broker, info in broker_map.items()
             ]
-            
-            return {
-                "stats": stats,
-                "time_labels": time_labels,
-                "transaction_volumes": transaction_volumes,
-                "price_trends": price_trends,
-                "categories": categories,
-                "regions": regions,
-                "popular_stocks": popular_stocks,
-                "last_update": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "data_source": "同花顺"
+            ranking.sort(key=lambda item: item["amount"], reverse=True)
+            return ranking[:5]
+
+        # 获取今日成交明细
+        trade_result = get_ths_dzjy_data(page=1)
+        trades = trade_result.get("data", []) if trade_result.get("success") else []
+        popular_stocks = get_ths_popular_stocks(limit=20) or []
+        daily_stats = get_ths_daily_statistics(days=30) or []
+
+        if not daily_stats and trades:
+            premium_count = sum(1 for item in trades if item.get("discount_rate", 0) >= 0)
+            discount_count = len(trades) - premium_count
+            total_amount_today = sum(float(item.get("amount", 0) or 0) for item in trades)
+            total_volume_today = sum(float(item.get("volume", 0) or 0) for item in trades)
+            daily_stats = [{
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "total_amount": round(total_amount_today, 2),
+                "total_volume": round(total_volume_today, 2),
+                "deal_count": len(trades),
+                "premium_count": premium_count,
+                "discount_count": discount_count,
+                "premium_ratio": round(premium_count / len(trades) * 100, 2) if trades else 0
+            }]
+
+        today_stats = daily_stats[-1] if daily_stats else {}
+        prev_stats = daily_stats[-2] if len(daily_stats) > 1 else None
+
+        today_amount = float(today_stats.get("total_amount", 0) or 0)
+        today_volume = float(today_stats.get("total_volume", 0) or 0)
+        today_deals = int(today_stats.get("deal_count", len(trades)))
+        today_discount_ratio = float(today_stats.get("premium_ratio", 0) or 0)
+
+        prev_amount = float(prev_stats.get("total_amount", 0) or 0) if prev_stats else None
+        prev_volume = float(prev_stats.get("total_volume", 0) or 0) if prev_stats else None
+        prev_deals = float(prev_stats.get("deal_count", 0) or 0) if prev_stats else None
+        prev_discount_ratio = float(prev_stats.get("premium_ratio", 0) or 0) if prev_stats else None
+
+        unique_codes = {trade.get("code") for trade in trades if trade.get("code")}
+        if not unique_codes and popular_stocks:
+            unique_codes = {stock.get("code") for stock in popular_stocks if stock.get("code")}
+        active_stocks = len(unique_codes)
+
+        intraday_labels, intraday_volumes, intraday_prices = build_intraday_series(trades)
+        volume_labels_30, volume_values_30 = build_series(daily_stats, "total_volume")
+        volume_labels_7, volume_values_7 = build_series(daily_stats, "total_volume", window=7)
+        amount_labels_30, amount_values_30 = build_series(daily_stats, "total_amount")
+        amount_labels_7, amount_values_7 = build_series(daily_stats, "total_amount", window=7)
+        price_labels_30, price_values_30 = build_price_series(daily_stats)
+        price_labels_7, price_values_7 = build_price_series(daily_stats, window=7)
+
+        chart_data = {
+            "volume": {
+                "h24": {"labels": intraday_labels, "values": intraday_volumes},
+                "d7": {"labels": volume_labels_7, "values": volume_values_7},
+                "d30": {"labels": volume_labels_30, "values": volume_values_30},
+            },
+            "amount": {
+                "d7": {"labels": amount_labels_7, "values": amount_values_7},
+                "d30": {"labels": amount_labels_30, "values": amount_values_30},
+            },
+            "price": {
+                "h24": {"labels": intraday_labels, "values": intraday_prices},
+                "d7": {"labels": price_labels_7, "values": price_values_7},
+                "d30": {"labels": price_labels_30, "values": price_values_30},
             }
+        }
+
+        hot_stocks = build_hot_stocks(trades) if trades else [
+            {
+                "name": stock.get("name", "--"),
+                "code": stock.get("code", "--"),
+                "amount": round(float(stock.get("amount", 0) or 0), 2),
+                "volume": round(float(stock.get("volume", 0) or 0), 2),
+                "discount_rate": round(float(stock.get("change_percent", 0) or 0), 2)
+            }
+            for stock in popular_stocks[:5]
+        ]
+
+        broker_rankings = build_broker_rankings(trades) if trades else []
+        broker_amount_total = sum(item["amount"] for item in broker_rankings) or 1
+
+        stats = {
+            "total_amount": round(today_amount, 2),
+            "total_amount_change": percent_change(today_amount, prev_amount),
+            "total_volume": round(today_volume, 2),
+            "total_volume_change": percent_change(today_volume, prev_volume),
+            "deal_count": today_deals,
+            "deal_count_change": percent_change(today_deals, prev_deals),
+            "avg_discount": round(today_discount_ratio, 2),
+            "avg_discount_change": round(today_discount_ratio - (prev_discount_ratio or 0), 2),
+            "active_stocks": active_stocks,
+            "active_stocks_change": percent_change(active_stocks, prev_deals),
+        }
+
+        data_source = trade_result.get("source", "同花顺") if trade_result.get("success") else "同花顺"
+
+        response_payload = {
+            "stats": stats,
+            "charts": chart_data,
+            "hot_stocks": hot_stocks,
+            "broker_rankings": broker_rankings,
+            "popular_stocks": popular_stocks[:10],
+            "last_update": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "data_source": data_source,
+        }
+
+        # 兼容旧版本前端字段
+        response_payload["time_labels"] = chart_data["volume"]["h24"]["labels"]
+        response_payload["transaction_volumes"] = chart_data["volume"]["h24"]["values"]
+        response_payload["price_trends"] = chart_data["price"]["h24"]["values"]
+        response_payload["categories"] = [
+            {
+                "name": f"{item['name']} ({item['code']})",
+                "count": item["amount"],
+                "change": item["discount_rate"],
+            }
+            for item in hot_stocks
+        ]
+        response_payload["regions"] = [
+            {
+                "name": item["name"],
+                "count": item["count"],
+                "percentage": round(item["amount"] / broker_amount_total * 100, 1),
+                "change": 0.0,
+            }
+            for item in broker_rankings
+        ]
+
+        return response_payload
+
     except Exception as e:
         logger.warning(f"获取真实数据失败，使用模拟数据: {e}")
-        # 失败则使用模拟数据（原有逻辑）
         import random
         from datetime import timedelta
-        
-        # 生成24小时时间标签
-        time_labels = []
-        current_time = datetime.now()
-        for i in range(24):
-            time = current_time - timedelta(hours=23-i)
-            time_labels.append(time.strftime("%H:%M"))
-        
-        # 生成模拟的统计数据
+
+        time_labels = [f"{(datetime.now() - timedelta(hours=23 - i)).strftime('%H:%M')}" for i in range(24)]
+        transaction_volumes = [random.randint(60, 180) for _ in range(24)]
+        price_trends = [round(3500 + random.uniform(-80, 80), 2) for _ in range(24)]
+
         stats = {
-            "total_volume": round(random.uniform(50, 100), 2),
-            "total_transactions": random.randint(100, 500),
-            "avg_price": round(random.uniform(-2, 2), 2),
-            "active_sellers": random.randint(50, 150)
+            "total_amount": round(random.uniform(5, 12), 2),
+            "total_amount_change": round(random.uniform(-5, 8), 2),
+            "total_volume": round(random.uniform(200, 500), 2),
+            "total_volume_change": round(random.uniform(-5, 8), 2),
+            "deal_count": random.randint(120, 300),
+            "deal_count_change": round(random.uniform(-5, 8), 2),
+            "avg_discount": round(random.uniform(-2, 2), 2),
+            "avg_discount_change": round(random.uniform(-1, 1), 2),
+            "active_stocks": random.randint(40, 80),
+            "active_stocks_change": round(random.uniform(-5, 8), 2),
         }
-        
-        # 生成交易量和价格趋势数据
-        transaction_volumes = [random.randint(50, 200) for _ in range(24)]
-        price_trends = [round(3600 + random.uniform(-50, 50), 2) for _ in range(24)]
-        
-        # 生成类别排行
+
         categories = [
-            {"name": "钢材", "count": random.randint(100, 300), "change": round(random.uniform(-10, 20), 1)},
-            {"name": "有色金属", "count": random.randint(80, 250), "change": round(random.uniform(-10, 20), 1)},
-            {"name": "能源化工", "count": random.randint(60, 200), "change": round(random.uniform(-10, 20), 1)},
-            {"name": "农产品", "count": random.randint(40, 150), "change": round(random.uniform(-10, 20), 1)},
-            {"name": "建材", "count": random.randint(30, 120), "change": round(random.uniform(-10, 20), 1)}
+            {"name": "热门钢材", "count": round(random.uniform(1200, 2600), 2), "change": round(random.uniform(-3, 6), 2)},
+            {"name": "能源化工", "count": round(random.uniform(900, 2000), 2), "change": round(random.uniform(-3, 6), 2)},
+            {"name": "有色金属", "count": round(random.uniform(700, 1800), 2), "change": round(random.uniform(-3, 6), 2)},
+            {"name": "农林产品", "count": round(random.uniform(500, 1500), 2), "change": round(random.uniform(-3, 6), 2)},
+            {"name": "建材", "count": round(random.uniform(400, 1200), 2), "change": round(random.uniform(-3, 6), 2)},
         ]
-        
-        # 生成地区排行
+
         regions = [
-            {"name": "华东", "count": random.randint(200, 400), "percentage": round(random.uniform(25, 35), 1), "change": round(random.uniform(-5, 15), 1)},
-            {"name": "华北", "count": random.randint(150, 350), "percentage": round(random.uniform(20, 30), 1), "change": round(random.uniform(-5, 15), 1)},
-            {"name": "华南", "count": random.randint(100, 300), "percentage": round(random.uniform(15, 25), 1), "change": round(random.uniform(-5, 15), 1)},
-            {"name": "西南", "count": random.randint(80, 200), "percentage": round(random.uniform(10, 20), 1), "change": round(random.uniform(-5, 15), 1)},
-            {"name": "东北", "count": random.randint(50, 150), "percentage": round(random.uniform(5, 15), 1), "change": round(random.uniform(-5, 15), 1)}
+            {"name": "华东营业部", "count": random.randint(40, 90), "percentage": round(random.uniform(25, 35), 1), "change": round(random.uniform(-2, 4), 2)},
+            {"name": "华南营业部", "count": random.randint(30, 70), "percentage": round(random.uniform(18, 28), 1), "change": round(random.uniform(-2, 4), 2)},
+            {"name": "华北营业部", "count": random.randint(30, 60), "percentage": round(random.uniform(15, 25), 1), "change": round(random.uniform(-2, 4), 2)},
+            {"name": "西南营业部", "count": random.randint(20, 50), "percentage": round(random.uniform(10, 18), 1), "change": round(random.uniform(-2, 4), 2)},
+            {"name": "东北营业部", "count": random.randint(15, 40), "percentage": round(random.uniform(8, 15), 1), "change": round(random.uniform(-2, 4), 2)},
         ]
-        
+
+        fallback_charts = {
+            "volume": {
+                "h24": {"labels": time_labels, "values": transaction_volumes},
+                "d7": {"labels": [f"近7日-{i}" for i in range(7)], "values": [random.randint(180, 320) for _ in range(7)]},
+                "d30": {"labels": [f"近30日-{i}" for i in range(30)], "values": [random.randint(150, 350) for _ in range(30)]},
+            },
+            "price": {
+                "h24": {"labels": time_labels, "values": price_trends},
+                "d7": {"labels": [f"近7日-{i}" for i in range(7)], "values": [round(3500 + random.uniform(-80, 80), 2) for _ in range(7)]},
+                "d30": {"labels": [f"近30日-{i}" for i in range(30)], "values": [round(3500 + random.uniform(-80, 80), 2) for _ in range(30)]},
+            }
+        }
+
         return {
             "stats": stats,
+            "charts": fallback_charts,
             "time_labels": time_labels,
             "transaction_volumes": transaction_volumes,
             "price_trends": price_trends,

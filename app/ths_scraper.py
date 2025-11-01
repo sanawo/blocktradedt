@@ -194,9 +194,9 @@ class TongHuaShunScraper:
                         row_data['sell_broker'] = row_values[8] if len(row_values) > 8 else ''
                         row_data['date'] = row_values[0] if len(row_values) > 0 else date
                         
-                        # 计算成交金额
+                        # 计算成交金额（单位：万元）
                         if row_data['trade_price'] and row_data['volume']:
-                            row_data['amount'] = row_data['trade_price'] * row_data['volume'] / 10000  # 转换为万元
+                            row_data['amount'] = row_data['trade_price'] * row_data['volume']
                         else:
                             row_data['amount'] = 0
                         

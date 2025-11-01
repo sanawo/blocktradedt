@@ -621,7 +621,7 @@
     <div class="rankings-section">
       <!-- 热门类别 -->
       <div class="ranking-card">
-        <h3 class="ranking-header">🔥 热门类别 TOP 5</h3>
+        <h3 class="ranking-header">🔥 热门股票 TOP 5</h3>
         <ul class="ranking-list" id="categoryRanking">
           <!-- 动态填充 -->
         </ul>
@@ -629,7 +629,7 @@
 
       <!-- 热门地区 -->
       <div class="ranking-card">
-        <h3 class="ranking-header">📍 热门地区 TOP 5</h3>
+        <h3 class="ranking-header">🏦 买方营业部 TOP 5</h3>
         <ul class="ranking-list" id="regionRanking">
           <!-- 动态填充 -->
         </ul>
@@ -699,12 +699,12 @@
   </div>
 
   <script>
-    // 全局变量
     let volumeChart, priceChart;
+    let trendData = null;
+    const periodMap = { '24h': 'h24', '7d': 'd7', '30d': 'd30' };
+    let currentPeriod = '24h';
 
-    // 初始化图表
     function initCharts() {
-      // 交易量趋势图
       const volumeCtx = document.getElementById('volumeChart').getContext('2d');
       volumeChart = new Chart(volumeCtx, {
         type: 'line',
@@ -741,7 +741,6 @@
         }
       });
 
-      // 价格趋势图
       const priceCtx = document.getElementById('priceChart').getContext('2d');
       priceChart = new Chart(priceCtx, {
         type: 'line',
@@ -779,93 +778,226 @@
       });
     }
 
-    // 加载趋势数据
-    async function loadTrendsData() {
-      try {
-        const response = await fetch('/api/trends/data');
-        const data = await response.json();
+    function formatNumber(value, digits = 2) {
+      if (value === null || value === undefined || Number.isNaN(Number(value))) {
+        return '--';
+      }
+      return Number(value).toLocaleString('zh-CN', {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+      });
+    }
 
-        // 更新关键指标
-        document.getElementById('totalAmount').textContent = `${data.stats.total_volume.toFixed(2)}亿`;
-        document.getElementById('totalVolume').textContent = `${data.stats.total_transactions.toLocaleString()}笔`;
-        document.getElementById('activeStocks').textContent = `${data.stats.active_sellers}只`;
-        document.getElementById('avgDiscount').textContent = `${data.stats.avg_price.toFixed(2)}%`;
-        document.getElementById('lastUpdateTime').textContent = data.last_update;
+    function formatAmount(value) {
+      if (value === null || value === undefined) return '--';
+      const numeric = Number(value) || 0;
+      if (Math.abs(numeric) >= 10000) {
+        return `${(numeric / 10000).toFixed(2)} 亿元`;
+      }
+      return `${numeric.toFixed(2)} 万元`;
+    }
 
-        // 更新图表
-        volumeChart.data.labels = data.time_labels;
-        volumeChart.data.datasets[0].data = data.transaction_volumes;
-        volumeChart.update();
+    function formatAmountShort(value) {
+      if (value === null || value === undefined) return '--';
+      const numeric = Number(value) || 0;
+      if (Math.abs(numeric) >= 10000) {
+        return `${(numeric / 10000).toFixed(2)} 亿元`;
+      }
+      return `${numeric.toFixed(2)} 万元`;
+    }
 
-        priceChart.data.labels = data.time_labels;
-        priceChart.data.datasets[0].data = data.price_trends;
-        priceChart.update();
+    function formatVolume(value) {
+      if (value === null || value === undefined) return '--';
+      const numeric = Number(value) || 0;
+      return `${numeric.toFixed(2)} 万股`;
+    }
 
-        // 更新排行榜
-        updateRankings('categoryRanking', data.categories);
-        updateRankings('regionRanking', data.regions);
-
-      } catch (error) {
-        console.error('加载数据失败:', error);
+    function setChangeIndicator(elementId, value, { suffix = '%', showSign = true } = {}) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      const numeric = Number(value);
+      if (Number.isNaN(numeric)) {
+        el.textContent = '--';
+        el.classList.remove('positive', 'negative');
+        return;
+      }
+      const sign = showSign ? (numeric > 0 ? '+' : numeric < 0 ? '-' : '') : '';
+      el.textContent = `${sign}${Math.abs(numeric).toFixed(2)}${suffix}`;
+      el.classList.remove('positive', 'negative');
+      if (numeric > 0) {
+        el.classList.add('positive');
+      } else if (numeric < 0) {
+        el.classList.add('negative');
       }
     }
 
-    // 更新排行榜
-    function updateRankings(elementId, items) {
-      const list = document.getElementById(elementId);
-      list.innerHTML = items.map((item, index) => {
+    function updateStats(stats) {
+      if (!stats) return;
+      document.getElementById('totalAmount').textContent = formatAmount(stats.total_amount);
+      setChangeIndicator('amountChange', stats.total_amount_change);
+
+      document.getElementById('totalVolume').textContent = formatVolume(stats.total_volume);
+      setChangeIndicator('volumeChange', stats.total_volume_change);
+
+      document.getElementById('activeStocks').textContent = `${stats.active_stocks ?? '--'}只`;
+      setChangeIndicator('stocksChange', stats.active_stocks_change);
+
+      document.getElementById('avgDiscount').textContent = `${formatNumber(stats.avg_discount)}%`;
+      setChangeIndicator('discountChange', stats.avg_discount_change);
+    }
+
+    function applyPeriod(uiPeriod = '24h') {
+      currentPeriod = uiPeriod;
+      if (!trendData || !trendData.charts) return;
+      const key = periodMap[uiPeriod] || 'h24';
+
+      const volumeDataset = trendData.charts.volume?.[key];
+      if (volumeDataset) {
+        volumeChart.data.labels = volumeDataset.labels || [];
+        volumeChart.data.datasets[0].data = volumeDataset.values || [];
+        volumeChart.update();
+      }
+
+      const priceRoot = trendData.charts.price || {};
+      const priceDataset = priceRoot[key] || priceRoot.h24;
+      if (priceDataset) {
+        priceChart.data.labels = priceDataset.labels || [];
+        priceChart.data.datasets[0].data = priceDataset.values || [];
+        priceChart.update();
+      }
+    }
+
+    function renderHotStocks(items) {
+      const list = document.getElementById('categoryRanking');
+      if (!list) return;
+      const data = Array.isArray(items) && items.length ? items : [];
+      if (!data.length) {
+        list.innerHTML = '<li class="ranking-item"><div class="ranking-info"><div class="ranking-name">暂无数据</div><div class="ranking-meta">稍后重试</div></div></li>';
+        return;
+      }
+
+      list.innerHTML = data.map((item, index) => {
         const rankClass = index === 0 ? 'top-1' : index === 1 ? 'top-2' : index === 2 ? 'top-3' : 'other';
-        const changeClass = item.change >= 0 ? 'positive' : 'negative';
-        
+        const discount = Number(item.discount_rate || 0);
+        const changeClass = discount > 0 ? 'positive' : discount < 0 ? 'negative' : 'neutral';
+        const discountText = Number.isFinite(discount)
+          ? `${discount > 0 ? '+' : discount < 0 ? '-' : ''}${Math.abs(discount).toFixed(2)}%`
+          : '--';
         return `
           <li class="ranking-item">
             <div class="ranking-left">
               <div class="ranking-number ${rankClass}">${index + 1}</div>
               <div class="ranking-info">
-                <div class="ranking-name">${item.name}</div>
-                <div class="ranking-meta">${item.count} 笔交易</div>
+                <div class="ranking-name">${item.name || '--'}</div>
+                <div class="ranking-meta">
+                  ${item.code ? `代码 ${item.code} · ` : ''}成交金额 ${formatAmountShort(item.amount)} · 成交量 ${formatNumber(item.volume)} 万股
+                </div>
               </div>
             </div>
             <div class="ranking-value stat-change ${changeClass}">
-              ${item.change >= 0 ? '+' : ''}${item.change}%
+              ${discountText}
             </div>
           </li>
         `;
       }).join('');
     }
 
-    // 大宗交易数据相关
+    function renderBrokerRankings(items) {
+      const list = document.getElementById('regionRanking');
+      if (!list) return;
+      const data = Array.isArray(items) && items.length ? items : [];
+      if (!data.length) {
+        list.innerHTML = '<li class="ranking-item"><div class="ranking-info"><div class="ranking-name">暂无数据</div><div class="ranking-meta">稍后重试</div></div></li>';
+        return;
+      }
+
+      const totalAmount = data.reduce((sum, item) => sum + Number(item.amount || 0), 0) || 1;
+
+      list.innerHTML = data.map((item, index) => {
+        const rankClass = index === 0 ? 'top-1' : index === 1 ? 'top-2' : index === 2 ? 'top-3' : 'other';
+        const share = (Number(item.amount || 0) / totalAmount) * 100;
+        return `
+          <li class="ranking-item">
+            <div class="ranking-left">
+              <div class="ranking-number ${rankClass}">${index + 1}</div>
+              <div class="ranking-info">
+                <div class="ranking-name">${item.name || '--'}</div>
+                <div class="ranking-meta">成交金额 ${formatAmountShort(item.amount)} · ${item.count || 0} 笔</div>
+              </div>
+            </div>
+            <div class="ranking-value stat-change positive">
+              ${share.toFixed(1)}%
+            </div>
+          </li>
+        `;
+      }).join('');
+    }
+
+    function syncTimeButtons(uiPeriod) {
+      document.querySelectorAll('.time-btn').forEach(btn => {
+        if (btn.dataset.period === uiPeriod) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+
+    async function loadTrendsData(applyCurrent = true) {
+      try {
+        const response = await fetch('/api/trends/data');
+        const data = await response.json();
+        trendData = data;
+
+        if (data.stats) {
+          updateStats(data.stats);
+        }
+
+        if (data.last_update) {
+          document.getElementById('lastUpdateTime').textContent = data.last_update;
+        }
+
+        if (data.data_source) {
+          document.getElementById('dataSource').textContent = `数据来源: ${data.data_source}`;
+        }
+
+        renderHotStocks(data.hot_stocks || data.categories || []);
+        renderBrokerRankings(data.broker_rankings || data.regions || []);
+
+        if (applyCurrent) {
+          applyPeriod(currentPeriod);
+          syncTimeButtons(currentPeriod);
+        }
+      } catch (error) {
+        console.error('加载数据失败:', error);
+      }
+    }
+
     let currentPage = 1;
     let dzjyData = [];
 
-    // 加载大宗交易数据
     async function loadDzjyData(page = 1) {
       try {
         const tbody = document.getElementById('dzjyTableBody');
         tbody.innerHTML = '<tr><td colspan="10" class="loading-cell"><div class="table-loading"><span>正在加载数据...</span></div></td></tr>';
-        
+
         const response = await fetch(`/api/ths/dzjy?page=${page}`);
         const result = await response.json();
 
         if (result.success && result.data && result.data.length > 0) {
           dzjyData = result.data;
           currentPage = page;
-          
-          // 更新数据源显示
+
           if (result.source) {
             document.getElementById('dataSource').textContent = `数据来源: ${result.source}`;
           }
-          
-          // 渲染表格
+
           renderDzjyTable(dzjyData);
-          
-          // 更新分页信息
           updatePagination();
         } else {
-          // 如果同花顺数据获取失败，尝试获取热门股票数据
           const popularResponse = await fetch(`/api/ths/popular?limit=50`);
           const popularResult = await popularResponse.json();
-          
+
           if (popularResult.success && popularResult.data && popularResult.data.length > 0) {
             dzjyData = popularResult.data.map(stock => ({
               date: stock.date || new Date().toISOString().split('T')[0],
@@ -879,10 +1011,10 @@
               buy_broker: '--',
               sell_broker: '--'
             }));
-            
+
             renderDzjyTable(dzjyData);
             updatePagination();
-            
+
             document.getElementById('dataSource').textContent = `数据来源: ${popularResult.source || '同花顺'}`;
           } else {
             tbody.innerHTML = '<tr><td colspan="10" class="loading-cell"><div style="color: var(--text-secondary);">暂无数据</div></td></tr>';
@@ -895,20 +1027,19 @@
       }
     }
 
-    // 渲染大宗交易表格
     function renderDzjyTable(data) {
       const tbody = document.getElementById('dzjyTableBody');
-      
+
       if (!data || data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="10" class="loading-cell"><div style="color: var(--text-secondary);">暂无数据</div></td></tr>';
         return;
       }
-      
+
       tbody.innerHTML = data.map(item => {
         const discountRate = item.discount_rate || 0;
         const discountClass = discountRate > 0 ? 'positive' : discountRate < 0 ? 'negative' : 'neutral';
         const discountSign = discountRate >= 0 ? '+' : '';
-        
+
         return `
           <tr>
             <td>${item.date || '--'}</td>
@@ -926,17 +1057,15 @@
       }).join('');
     }
 
-    // 更新分页信息
     function updatePagination() {
       const totalPages = Math.max(1, Math.ceil(dzjyData.length / 50));
       document.getElementById('currentPage').textContent = currentPage;
       document.getElementById('totalPages').textContent = totalPages;
-      
+
       document.getElementById('prevBtn').disabled = currentPage <= 1;
       document.getElementById('nextBtn').disabled = currentPage >= totalPages;
     }
 
-    // 切换页码
     function changePage(delta) {
       const newPage = currentPage + delta;
       if (newPage >= 1) {
@@ -944,29 +1073,32 @@
       }
     }
 
-    // 初始化
     document.addEventListener('DOMContentLoaded', () => {
       initCharts();
-      loadTrendsData();
-      loadDzjyData(); // 加载大宗交易数据
+      loadTrendsData(true);
+      loadDzjyData();
 
-      // 每30秒更新一次
-      setInterval(loadTrendsData, 30000);
-      setInterval(() => loadDzjyData(currentPage), 60000); // 每60秒更新一次大宗交易数据
-
-      // 时间按钮切换
       document.querySelectorAll('.time-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-          const parent = btn.closest('.chart-controls');
-          parent.querySelectorAll('.time-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          // 这里可以根据选择的时间段重新加载数据
+          const period = btn.dataset.period || '24h';
+          syncTimeButtons(period);
+          applyPeriod(period);
         });
       });
+
+      setInterval(() => {
+        loadTrendsData(false).then(() => {
+          applyPeriod(currentPeriod);
+          syncTimeButtons(currentPeriod);
+        });
+      }, 30000);
+
+      setInterval(() => loadDzjyData(currentPage), 60000);
     });
   </script>
 </body>
 </html>
+
 
 
 
