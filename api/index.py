@@ -293,6 +293,15 @@ async def api_news_latest(limit: int = 6):
         "https://www.csrc.gov.cn/"
     ]
     
+    news_images = [
+        "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80",
+        "https://images.unsplash.com/photo-1565372195458-9de0b320ef04?w=800&q=80",
+        "https://images.unsplash.com/photo-1639762681057-408e52192e55?w=800&q=80",
+        "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&q=80",
+        "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
+        "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80"
+    ]
+    
     sources = ["新浪财经", "财经网", "腾讯财经", "国家发改委", "财新网", "证监会"]
     
     news_list = []
@@ -306,7 +315,8 @@ async def api_news_latest(limit: int = 6):
             "summary": news_summaries[i],
             "source": sources[i],
             "time": news_time.strftime("%Y-%m-%d %H:%M"),
-            "url": news_urls[i]
+            "url": news_urls[i],
+            "image": news_images[i]
         }
         news_list.append(news_item)
     

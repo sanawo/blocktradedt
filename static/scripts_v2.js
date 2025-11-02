@@ -258,7 +258,7 @@ function populateHotStocks() {
   tbody.innerHTML = mockData.map(stock => `
     <tr>
       <td>${stock.rank}</td>
-      <td>${stock.code}</td>
+      <td><a href="/stock/${stock.code}" style="color: var(--primary-color); text-decoration: none; font-weight: 600;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${stock.code}</a></td>
       <td>${stock.name}</td>
       <td>¥${stock.price}</td>
       <td class="value-change ${stock.change >= 0 ? 'positive' : 'negative'}">
@@ -468,7 +468,7 @@ function updateHotStocks(stocks) {
   hotStocksTable.innerHTML = stocks.slice(0, 10).map((stock, index) => `
     <tr>
       <td>${index + 1}</td>
-      <td>${stock.code || 'N/A'}</td>
+      <td><a href="/stock/${stock.code || ''}" style="color: var(--primary-color); text-decoration: none; font-weight: 600;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${stock.code || 'N/A'}</a></td>
       <td>${stock.name || 'N/A'}</td>
       <td>${stock.price || 'N/A'}</td>
       <td class="${stock.change && stock.change.includes('-') ? 'negative' : 'positive'}">
@@ -490,7 +490,7 @@ async function loadLatestNews() {
     const news = await response.json();
     
     newsGrid.innerHTML = news.map(item => `
-      <div class="news-card" onclick="window.location.href='/news/${item.id}'">
+      <div class="news-card" onclick="window.open('${item.url}', '_blank')">
         <img class="lazy news-image" data-src="${item.image || 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&q=80'}" alt="${item.title}" />
         <div class="news-content">
           <div class="news-meta">
