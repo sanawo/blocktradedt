@@ -98,10 +98,15 @@ class LLM:
         context = self._build_context(query, results)
         
         try:
-            # 选择模型
-            model_name = "glm-4-flash" if "4.5" in self.model.lower() else self.model
+            # 选择模型（根据文档使用glm-4-flash或glm-4.6）
+            if "4.5" in self.model.lower() or "4.6" in self.model.lower():
+                model_name = "glm-4-flash"
+            elif "glm-4" in self.model.lower():
+                model_name = "glm-4-flash"
+            else:
+                model_name = self.model
             
-            # 使用官方zhipuai SDK
+            # 使用官方zhipuai SDK（根据文档标准格式）
             response = self.client.chat.completions.create(
                 model=model_name,
                 messages=[
@@ -115,14 +120,19 @@ class LLM:
                     }
                 ],
                 temperature=0.7,
-                max_tokens=500
+                max_tokens=500,
+                stream=False  # 明确指定非流式
             )
             
-            # 处理响应
+            # 处理响应（根据文档：response.choices[0].message.content）
             if hasattr(response, 'choices') and len(response.choices) > 0:
-                return response.choices[0].message.content
-            else:
-                return "摘要生成失败，请稍后重试。"
+                choice = response.choices[0]
+                if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
+                    content = choice.message.content
+                    if content:
+                        return content
+            logger.warning(f"摘要生成响应格式异常: {type(response)}")
+            return "摘要生成失败，请稍后重试。"
                 
         except Exception as e:
             print(f"AI摘要生成失败: {e}")
@@ -240,17 +250,24 @@ class LLM:
                                 content += delta.content
                     return content if content else "抱歉，未收到有效回复。"
                 else:
-                    # 非流式输出
+                    # 非流式输出（根据文档标准格式）
                     response = self.client.chat.completions.create(
                         model=model_name,
                         messages=messages,
                         temperature=0.7,
-                        max_tokens=4096
+                        max_tokens=4096,
+                        stream=False  # 明确指定非流式
                     )
+                    # 检查响应格式（根据文档：response.choices[0].message.content）
                     if hasattr(response, 'choices') and len(response.choices) > 0:
-                        return response.choices[0].message.content
-                    else:
-                        return "抱歉，未收到有效回复。"
+                        choice = response.choices[0]
+                        if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
+                            content = choice.message.content
+                            if content:
+                                return content
+                    # 如果响应格式不同，记录日志
+                    logger.warning(f"响应格式异常: {type(response)}")
+                    return "抱歉，未收到有效回复。请检查API响应格式。"
             except AttributeError as e:
                 # 如果API接口不同，尝试兼容调用
                 logger.warning(f"API接口不兼容，尝试兼容调用: {e}")
