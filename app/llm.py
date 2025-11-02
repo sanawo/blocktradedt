@@ -153,7 +153,16 @@ class LLM:
             AI回复
         """
         if not self.client:
-            return "AI助手暂时不可用，请检查API密钥配置。请设置环境变量ZHIPU_API_KEY或提供API密钥。"
+            return """❌ AI功能当前不可用
+
+原因：未配置智谱AI API密钥
+
+解决方法：
+1. 在Zeabur平台的环境变量中添加：ZHIPU_API_KEY=your_api_key
+2. 或在本地运行时设置环境变量
+3. 获取API密钥：访问 https://open.bigmodel.cn/
+
+当前状态：AI功能已启用本地回复模式，可以提供基础帮助。"""
         
         try:
             # 使用自定义system_prompt或默认提示词

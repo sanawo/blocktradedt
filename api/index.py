@@ -293,7 +293,7 @@ async def api_news_latest(limit: int = 6):
         "https://www.csrc.gov.cn/"
     ]
     
-    sources = ["新浪财经", "东方财富网", "腾讯财经", "国家发改委", "财新网", "证监会"]
+    sources = ["新浪财经", "财经网", "腾讯财经", "国家发改委", "财新网", "证监会"]
     
     news_list = []
     for i in range(min(limit, len(news_titles))):
@@ -325,8 +325,20 @@ async def chat_with_ai(chat_request: ChatRequest):
         
         # 如果消息是空的，返回友好的提示
         if not message or not message.strip():
+            ai_status = "✅ 已启用" if llm.client else "❌ 未配置API密钥（使用本地回复模式）"
             return ChatResponse(
-                response="您好！我是Block Trade DT的AI助手。我可以帮助您：\n1. 查询市场数据\n2. 分析市场趋势\n3. 解答交易相关问题\n4. 生成研报摘要\n\n请输入您的问题，我将为您提供帮助。",
+                response=f"""您好！我是Block Trade DT的AI助手。我可以帮助您：
+
+1. 📊 查询市场数据
+2. 📈 分析市场趋势  
+3. 💡 解答交易相关问题
+4. 📄 生成研报摘要
+
+AI状态：{ai_status}
+
+{"提示：如需使用完整AI功能，请在Zeabur环境变量中配置ZHIPU_API_KEY" if not llm.client else ""}
+
+请输入您的问题，我将为您提供帮助。""",
                 timestamp=datetime.now().isoformat(),
                 success=True
             )
@@ -949,7 +961,7 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "title": "钢材价格持续上涨，市场供需关系紧张",
                 "summary": "受供应链紧张和需求增长双重影响，近期钢材价格持续上涨，市场预期后续仍有上涨空间。",
                 "url": "https://www.eastmoney.com/",
-                "source": "东方财富网",
+                "source": "财经网",
                 "image": "https://images.unsplash.com/photo-1565372195458-9de0b320ef04?w=800&q=80"
             },
             {
