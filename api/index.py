@@ -312,6 +312,65 @@ async def api_news_latest(limit: int = 6):
     
     return news_list
 
+@app.get("/api/chat/diagnose")
+async def diagnose_ai():
+    """AI功能诊断端点"""
+    try:
+        from app.llm import LLM
+        import os
+        
+        diagnosis = {
+            "api_key_exists": bool(os.getenv('ZHIPU_API_KEY')),
+            "api_key_length": len(os.getenv('ZHIPU_API_KEY', '')),
+            "llm_client_status": None,
+            "llm_init_error": None,
+            "sdk_available": False,
+            "test_result": None
+        }
+        
+        # 检查SDK是否可用
+        try:
+            import zhipuai
+            diagnosis["sdk_available"] = True
+            diagnosis["sdk_version"] = getattr(zhipuai, '__version__', 'unknown')
+        except ImportError:
+            diagnosis["sdk_available"] = False
+            diagnosis["sdk_error"] = "zhipuai SDK未安装"
+        
+        # 初始化LLM并检查状态
+        try:
+            llm = LLM()
+            diagnosis["llm_client_status"] = "initialized" if llm.client else "failed"
+            diagnosis["llm_init_error"] = llm.init_error if hasattr(llm, 'init_error') else None
+            
+            # 如果客户端可用，尝试测试调用
+            if llm.client:
+                try:
+                    test_response = llm.chat("测试", stream=False)
+                    diagnosis["test_result"] = "success" if test_response and "❌" not in test_response else "failed"
+                    diagnosis["test_response_preview"] = test_response[:100] if test_response else None
+                except Exception as e:
+                    diagnosis["test_result"] = "error"
+                    diagnosis["test_error"] = str(e)
+        except Exception as e:
+            diagnosis["llm_init_error"] = str(e)
+            import traceback
+            diagnosis["llm_traceback"] = traceback.format_exc()
+        
+        return {
+            "success": True,
+            "diagnosis": diagnosis,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "timestamp": datetime.now().isoformat()
+        }
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_with_ai(chat_request: ChatRequest):
     try:
@@ -326,19 +385,33 @@ async def chat_with_ai(chat_request: ChatRequest):
         # 如果消息是空的，返回友好的提示
         if not message or not message.strip():
             ai_status = "✅ 已启用" if llm.client else "❌ 未配置API密钥（使用本地回复模式）"
-            return ChatResponse(
-                response=f"""您好！我是Block Trade DT的AI助手。我可以帮助您：
+            error_info = llm.init_error if hasattr(llm, 'init_error') and llm.init_error else None
+            
+            status_msg = f"""您好！我是Block Trade DT的AI助手。我可以帮助您：
 
 1. 📊 查询市场数据
 2. 📈 分析市场趋势  
 3. 💡 解答交易相关问题
 4. 📄 生成研报摘要
 
-AI状态：{ai_status}
+AI状态：{ai_status}"""
+            
+            if not llm.client:
+                status_msg += f"""
 
-{"提示：如需使用完整AI功能，请在Zeabur环境变量中配置ZHIPU_API_KEY" if not llm.client else ""}
+❌ AI功能当前不可用
 
-请输入您的问题，我将为您提供帮助。""",
+原因：{error_info or '未配置API密钥'}
+
+解决方法：
+1. 在Zeabur环境变量中添加：ZHIPU_API_KEY=your_api_key
+2. 重新部署应用
+3. 访问 /api/chat/diagnose 查看详细诊断信息
+
+当前使用本地回复模式。"""
+            
+            return ChatResponse(
+                response=status_msg,
                 timestamp=datetime.now().isoformat(),
                 success=True
             )
@@ -359,25 +432,34 @@ AI状态：{ai_status}
                         stream=chat_request.stream if chat_request.stream is not None else False
                     )
                     logger.info(f"AI响应长度: {len(ai_response) if ai_response else 0}")
+                    logger.info(f"AI响应预览: {ai_response[:200] if ai_response else 'None'}")
+                    
                     # 只有在返回有效内容时才使用AI回复
                     if ai_response and ai_response.strip() and "暂时不可用" not in ai_response and "检查API密钥" not in ai_response and "❌" not in ai_response:
-                        logger.info("使用AI回复")
+                        logger.info("✅ 使用AI回复")
                         response = ai_response
                     else:
-                        logger.warning(f"AI回复无效，使用本地回复。AI回复: {ai_response[:100] if ai_response else 'None'}")
+                        logger.warning(f"AI回复包含错误标记，使用本地回复。AI回复: {ai_response[:200] if ai_response else 'None'}")
+                        # 如果AI返回错误信息，将其添加到响应中
+                        if ai_response and "❌" in ai_response:
+                            response = f"{response}\n\n{ai_response}"
                 except Exception as e:
-                    logger.error(f"AI客户端调用失败，使用本地回复: {e}")
+                    error_msg = str(e)
+                    logger.error(f"AI客户端调用失败: {error_msg}")
                     import traceback
                     logger.error(traceback.format_exc())
-                    # 继续使用本地回复
+                    # 将错误信息添加到响应中
+                    response = f"{response}\n\n⚠️ AI调用失败: {error_msg}\n请访问 /api/chat/diagnose 查看详细诊断信息"
             else:
-                logger.info(f"AI客户端未初始化，使用本地回复。错误: {llm.init_error if hasattr(llm, 'init_error') else '未知'}")
+                error_info = llm.init_error if hasattr(llm, 'init_error') and llm.init_error else "未知错误"
+                logger.info(f"AI客户端未初始化，使用本地回复。错误: {error_info}")
+                response = f"{response}\n\n⚠️ AI功能未启用: {error_info}"
         
         except Exception as e:
             logger.error(f"生成回复失败: {e}")
             import traceback
             logger.error(traceback.format_exc())
-            response = "抱歉，处理您的问题时遇到错误。请稍后重试或尝试其他问题。"
+            response = f"抱歉，处理您的问题时遇到错误: {str(e)}。请稍后重试或尝试其他问题。"
         
         return ChatResponse(
             response=response,
