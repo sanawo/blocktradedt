@@ -348,7 +348,7 @@ async def chat_with_ai(chat_request: ChatRequest):
                     # 只有在返回有效内容时才使用AI回复
                     if ai_response and ai_response.strip() and "暂时不可用" not in ai_response and "检查API密钥" not in ai_response:
                         response = ai_response
-    except Exception as e:
+                except Exception as e:
                     logger.warning(f"AI客户端调用失败，使用本地回复: {e}")
                     import traceback
                     logger.warning(traceback.format_exc())
@@ -422,13 +422,13 @@ async def analyze_market_with_ai():
         import random
         
         # 生成市场统计数据（避免循环依赖）
-    stats = {
-        "total_volume": round(random.uniform(50, 100), 2),
-        "total_transactions": random.randint(100, 500),
-        "avg_price": round(random.uniform(-2, 2), 2),
-        "active_sellers": random.randint(50, 150)
-    }
-    
+        stats = {
+            "total_volume": round(random.uniform(50, 100), 2),
+            "total_transactions": random.randint(100, 500),
+            "avg_price": round(random.uniform(-2, 2), 2),
+            "active_sellers": random.randint(50, 150)
+        }
+        
         # 使用本地AI生成分析
         analysis_query = f"请分析以下市场数据：{stats}"
         analysis = generate_local_ai_response(analysis_query)
@@ -810,7 +810,7 @@ async def get_trends_data():
             "active_stocks_change": round(random.uniform(-5, 8), 2),
         }
 
-    categories = [
+        categories = [
             {"name": "热门钢材", "count": round(random.uniform(1200, 2600), 2), "change": round(random.uniform(-3, 6), 2)},
             {"name": "能源化工", "count": round(random.uniform(900, 2000), 2), "change": round(random.uniform(-3, 6), 2)},
             {"name": "有色金属", "count": round(random.uniform(700, 1800), 2), "change": round(random.uniform(-3, 6), 2)},
@@ -818,7 +818,7 @@ async def get_trends_data():
             {"name": "建材", "count": round(random.uniform(400, 1200), 2), "change": round(random.uniform(-3, 6), 2)},
         ]
 
-    regions = [
+        regions = [
             {"name": "华东营业部", "count": random.randint(40, 90), "percentage": round(random.uniform(25, 35), 1), "change": round(random.uniform(-2, 4), 2)},
             {"name": "华南营业部", "count": random.randint(30, 70), "percentage": round(random.uniform(18, 28), 1), "change": round(random.uniform(-2, 4), 2)},
             {"name": "华北营业部", "count": random.randint(30, 60), "percentage": round(random.uniform(15, 25), 1), "change": round(random.uniform(-2, 4), 2)},
@@ -838,15 +838,15 @@ async def get_trends_data():
                 "d30": {"labels": [f"近30日-{i}" for i in range(30)], "values": [round(3500 + random.uniform(-80, 80), 2) for _ in range(30)]},
             }
         }
-    
-    return {
-        "stats": stats,
+        
+        return {
+            "stats": stats,
             "charts": fallback_charts,
-        "time_labels": time_labels,
-        "transaction_volumes": transaction_volumes,
-        "price_trends": price_trends,
-        "categories": categories,
-        "regions": regions,
+            "time_labels": time_labels,
+            "transaction_volumes": transaction_volumes,
+            "price_trends": price_trends,
+            "categories": categories,
+            "regions": regions,
             "last_update": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "data_source": "模拟数据"
         }
