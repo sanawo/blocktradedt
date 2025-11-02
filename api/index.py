@@ -159,6 +159,16 @@ async def report_summarizer_page(request: Request):
         return HTMLResponse("<h1>研报摘要生成器</h1><p>模板系统未加载</p>")
     return templates.TemplateResponse("report_summarizer.html", {"request": request})
 
+@app.get("/stock/{stock_code}", response_class=HTMLResponse)
+async def stock_detail_page(request: Request, stock_code: str):
+    """股票详情页面"""
+    if templates is None:
+        return HTMLResponse(f"<h1>股票详情</h1><p>模板系统未加载</p><p>股票代码: {stock_code}</p>")
+    return templates.TemplateResponse("stock_detail.html", {
+        "request": request,
+        "stock_code": stock_code
+    })
+
 # API路由
 @app.post("/api/register")
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
@@ -338,7 +348,7 @@ async def chat_with_ai(chat_request: ChatRequest):
                     # 只有在返回有效内容时才使用AI回复
                     if ai_response and ai_response.strip() and "暂时不可用" not in ai_response and "检查API密钥" not in ai_response:
                         response = ai_response
-                except Exception as e:
+    except Exception as e:
                     logger.warning(f"AI客户端调用失败，使用本地回复: {e}")
                     import traceback
                     logger.warning(traceback.format_exc())
@@ -412,13 +422,13 @@ async def analyze_market_with_ai():
         import random
         
         # 生成市场统计数据（避免循环依赖）
-        stats = {
-            "total_volume": round(random.uniform(50, 100), 2),
-            "total_transactions": random.randint(100, 500),
-            "avg_price": round(random.uniform(-2, 2), 2),
-            "active_sellers": random.randint(50, 150)
-        }
-        
+    stats = {
+        "total_volume": round(random.uniform(50, 100), 2),
+        "total_transactions": random.randint(100, 500),
+        "avg_price": round(random.uniform(-2, 2), 2),
+        "active_sellers": random.randint(50, 150)
+    }
+    
         # 使用本地AI生成分析
         analysis_query = f"请分析以下市场数据：{stats}"
         analysis = generate_local_ai_response(analysis_query)
@@ -800,7 +810,7 @@ async def get_trends_data():
             "active_stocks_change": round(random.uniform(-5, 8), 2),
         }
 
-        categories = [
+    categories = [
             {"name": "热门钢材", "count": round(random.uniform(1200, 2600), 2), "change": round(random.uniform(-3, 6), 2)},
             {"name": "能源化工", "count": round(random.uniform(900, 2000), 2), "change": round(random.uniform(-3, 6), 2)},
             {"name": "有色金属", "count": round(random.uniform(700, 1800), 2), "change": round(random.uniform(-3, 6), 2)},
@@ -808,7 +818,7 @@ async def get_trends_data():
             {"name": "建材", "count": round(random.uniform(400, 1200), 2), "change": round(random.uniform(-3, 6), 2)},
         ]
 
-        regions = [
+    regions = [
             {"name": "华东营业部", "count": random.randint(40, 90), "percentage": round(random.uniform(25, 35), 1), "change": round(random.uniform(-2, 4), 2)},
             {"name": "华南营业部", "count": random.randint(30, 70), "percentage": round(random.uniform(18, 28), 1), "change": round(random.uniform(-2, 4), 2)},
             {"name": "华北营业部", "count": random.randint(30, 60), "percentage": round(random.uniform(15, 25), 1), "change": round(random.uniform(-2, 4), 2)},
@@ -828,15 +838,15 @@ async def get_trends_data():
                 "d30": {"labels": [f"近30日-{i}" for i in range(30)], "values": [round(3500 + random.uniform(-80, 80), 2) for _ in range(30)]},
             }
         }
-
-        return {
-            "stats": stats,
+    
+    return {
+        "stats": stats,
             "charts": fallback_charts,
-            "time_labels": time_labels,
-            "transaction_volumes": transaction_volumes,
-            "price_trends": price_trends,
-            "categories": categories,
-            "regions": regions,
+        "time_labels": time_labels,
+        "transaction_volumes": transaction_volumes,
+        "price_trends": price_trends,
+        "categories": categories,
+        "regions": regions,
             "last_update": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "data_source": "模拟数据"
         }
@@ -917,7 +927,7 @@ async def get_ths_market_overview():
             "error": str(e),
             "data": {},
             "timestamp": datetime.now().isoformat()
-        }
+    }
 
 @app.get("/api/news")
 async def api_news(page: int = 1, category: str = "all", limit: int = 20):
@@ -1158,6 +1168,94 @@ async def summarize_report_api(
         return {
             "success": False,
             "error": str(e),
+            "timestamp": datetime.now().isoformat()
+    }
+
+@app.get("/api/stock/{stock_code}")
+async def get_stock_detail(stock_code: str):
+    """
+    获取股票详情数据
+    """
+    try:
+        import random
+        from app.ths_scraper import TongHuaShunScraper
+        
+        logger.info(f"获取股票详情: {stock_code}")
+        
+        # 尝试从同花顺爬取数据
+        scraper = TongHuaShunScraper()
+        
+        # 获取该股票的大宗交易记录
+        # 使用便捷函数获取数据
+        from app.ths_scraper import get_ths_dzjy_data
+        dzjy_result = get_ths_dzjy_data(page=1)
+        stock_records = []
+        if dzjy_result.get("success") and dzjy_result.get("data"):
+            stock_records = [record for record in dzjy_result["data"] if record.get("code") == stock_code]
+            # 限制最多返回20条记录
+            stock_records = stock_records[:20]
+        
+        # 如果没有找到记录，生成模拟数据
+        if not stock_records:
+            # 生成模拟的大宗交易记录
+            for i in range(min(5, random.randint(3, 8))):
+                days_ago = random.randint(0, 30)
+                trade_date = (datetime.now() - timedelta(days=days_ago)).strftime('%Y-%m-%d')
+                base_price = random.uniform(10, 100)
+                stock_records.append({
+                    "date": trade_date,
+                    "code": stock_code,
+                    "name": f"股票{stock_code}",
+                    "trade_price": round(base_price, 2),
+                    "close_price": round(base_price * random.uniform(0.95, 1.05), 2),
+                    "volume": round(random.uniform(10, 500), 2),
+                    "discount_rate": round(random.uniform(-10, 10), 2),
+                    "amount": round(base_price * random.uniform(10, 500), 2),
+                    "buy_broker": f"券商{random.randint(1, 10)}营业部",
+                    "sell_broker": f"券商{random.randint(1, 10)}营业部"
+                })
+        
+        # 生成股票基本信息（模拟数据，实际应该从API获取）
+        base_price = random.uniform(10, 100)
+        change = random.uniform(-5, 5)
+        change_percent = (change / base_price) * 100
+        
+        stock_data = {
+            "code": stock_code,
+            "name": f"股票{stock_code}",  # 实际应该从API获取真实名称
+            "price": round(base_price, 2),
+            "change": round(change, 2),
+            "change_percent": round(change_percent, 2),
+            "open_price": round(base_price * random.uniform(0.98, 1.02), 2),
+            "prev_close": round(base_price - change, 2),
+            "high_price": round(base_price * random.uniform(1.0, 1.05), 2),
+            "low_price": round(base_price * random.uniform(0.95, 1.0), 2),
+            "volume": random.randint(1000000, 100000000),
+            "amount": random.randint(100000000, 10000000000),
+            "turnover_rate": round(random.uniform(0.5, 5.0), 2),
+            "total_market_value": random.randint(10000000000, 100000000000),
+            "circulating_value": random.randint(5000000000, 50000000000),
+            "pe_ratio": round(random.uniform(10, 50), 2),
+            "pb_ratio": round(random.uniform(1, 5), 2),
+            "total_shares": random.randint(100000, 10000000),
+            "circulating_shares": random.randint(50000, 5000000),
+            "trading_records": stock_records
+        }
+        
+        return {
+            "success": True,
+            "data": stock_data,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"获取股票详情失败: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return {
+            "success": False,
+            "error": str(e),
+            "data": None,
             "timestamp": datetime.now().isoformat()
     }
 

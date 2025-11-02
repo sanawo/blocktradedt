@@ -1124,7 +1124,7 @@
         return `
           <tr>
             <td>${item.date || '--'}</td>
-            <td><strong>${item.code || '--'}</strong></td>
+            <td><strong><a href="/stock/${item.code || ''}" style="color: var(--primary-color); text-decoration: none; font-weight: 600;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${item.code || '--'}</a></strong></td>
             <td>${item.name || '--'}</td>
             <td>${item.close_price ? item.close_price.toFixed(2) : '--'}</td>
             <td>${item.trade_price ? item.trade_price.toFixed(2) : '--'}</td>
