@@ -13,6 +13,7 @@ python-multipart==0.0.9
 bcrypt==4.1.2
 numpy==1.24.3
 zhipuai>=2.1.5  # 智谱AI官方SDK（旧版，稳定）
+zhipuai==2.3.0  # 指定稳定版本，确保部署兼容
 # zai-sdk>=0.0.4  # 智谱AI新版SDK（可选，如需使用请取消注释并注释上面的zhipuai）
 # fastembed==0.0.13  # Removed - version not available
 # sentence-transformers==2.2.2  # Removed for deployment compatibility
