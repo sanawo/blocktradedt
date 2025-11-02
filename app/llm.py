@@ -213,8 +213,14 @@ class LLM:
             })
             
             # 使用官方zhipuai SDK
-            # 选择模型：如果模型名包含glm-4.5则使用glm-4-flash（兼容模型）
-            model_name = "glm-4-flash" if "4.5" in self.model.lower() else self.model
+            # 模型映射：根据文档，支持glm-4.6, glm-4-flash等
+            # 如果指定glm-4.5-flash，使用glm-4-flash（兼容模型）
+            if "4.5" in self.model.lower() or "4.6" in self.model.lower():
+                model_name = "glm-4-flash"  # 使用兼容的免费模型
+            elif "glm-4" in self.model.lower():
+                model_name = "glm-4-flash"  # 默认使用flash版本
+            else:
+                model_name = self.model
             
             try:
                 # 尝试使用流式输出（如果支持）
