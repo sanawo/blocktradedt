@@ -492,11 +492,16 @@
             const metadata = document.getElementById('metadata');
             const summaryContent = document.getElementById('summaryContent');
             
-            // 元数据
+            // 元数据 - 添加生成方式
+            const generatedBy = summary.generated_by || '智能提取';
             metadata.innerHTML = `
                 <div class="metadata-item">
                     <span class="metadata-icon">⏱️</span>
                     <span>处理时间: ${data.processing_time}</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-icon">🤖</span>
+                    <span>生成方式: ${generatedBy}</span>
                 </div>
                 <div class="confidence-badge">
                     置信度: ${(summary.confidence * 100).toFixed(0)}%

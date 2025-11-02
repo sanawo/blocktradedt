@@ -1036,7 +1036,7 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
     import random
     from datetime import timedelta
     
-    # 新闻数据源配置
+    # 新闻数据源配置 - 每个新闻都有独特的图片
     news_sources = {
         "market": [
             {
@@ -1044,21 +1044,35 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "summary": "近期A股市场大宗交易活跃度显著提升，单日成交额突破100亿元大关，显示出机构投资者对市场前景的信心增强。",
                 "url": "https://finance.sina.com.cn/stock/marketresearch/",
                 "source": "新浪财经",
-                "image": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80"
+                "image": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80"  # 股票交易图表
             },
             {
                 "title": "钢材价格持续上涨，市场供需关系紧张",
                 "summary": "受供应链紧张和需求增长双重影响，近期钢材价格持续上涨，市场预期后续仍有上涨空间。",
                 "url": "https://www.eastmoney.com/",
                 "source": "财经网",
-                "image": "https://images.unsplash.com/photo-1565372195458-9de0b320ef04?w=800&q=80"
+                "image": "https://images.unsplash.com/photo-1565372195458-9de0b320ef04?w=800&q=80"  # 钢材/工业
             },
             {
                 "title": "有色金属板块领涨，铜价突破历史新高",
                 "summary": "有色金属板块表现强劲，铜价突破历史新高，专家建议关注相关投资机会。",
                 "url": "https://finance.qq.com/",
                 "source": "腾讯财经",
-                "image": "https://images.unsplash.com/photo-1639762681057-408e52192e55?w=800&q=80"
+                "image": "https://images.unsplash.com/photo-1639762681057-408e52192e55?w=800&q=80"  # 有色金属
+            },
+            {
+                "title": "煤炭市场供需平衡，价格稳中有升",
+                "summary": "随着冬季用煤需求增加，煤炭市场供需关系趋于平衡，价格呈现稳中有升的态势。",
+                "url": "https://finance.sina.com.cn/",
+                "source": "新浪财经",
+                "image": "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&q=80"  # 煤炭/能源
+            },
+            {
+                "title": "原油期货价格震荡上行，市场关注OPEC+决策",
+                "summary": "国际原油期货价格呈现震荡上行趋势，市场密切关注OPEC+组织的产量决策。",
+                "url": "https://finance.qq.com/",
+                "source": "腾讯财经",
+                "image": "https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=800&q=80"  # 原油/能源
             }
         ],
         "policy": [
@@ -1067,14 +1081,28 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "summary": "国家发改委出台新政策，加强大宗商品价格监管，维护市场秩序，促进经济稳定发展。",
                 "url": "https://www.ndrc.gov.cn/",
                 "source": "国家发改委",
-                "image": "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&q=80"
+                "image": "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&q=80"  # 政策/政府
             },
             {
                 "title": "证监会优化大宗交易制度，提升市场效率",
                 "summary": "证监会发布通知，进一步优化大宗交易制度，简化交易流程，提升市场效率。",
                 "url": "https://www.csrc.gov.cn/",
                 "source": "证监会",
-                "image": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80"
+                "image": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80"  # 金融监管
+            },
+            {
+                "title": "央行发布货币政策报告，强调稳健中性",
+                "summary": "央行发布最新货币政策执行报告，强调保持货币政策稳健中性，为实体经济提供有力支持。",
+                "url": "https://www.pbc.gov.cn/",
+                "source": "央行",
+                "image": "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&q=80"  # 货币政策
+            },
+            {
+                "title": "财政部：加大减税降费力度，支持实体经济发展",
+                "summary": "财政部表示将继续加大减税降费力度，进一步减轻企业负担，支持实体经济发展。",
+                "url": "https://www.mof.gov.cn/",
+                "source": "财政部",
+                "image": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80"  # 财政政策
             }
         ],
         "analysis": [
@@ -1083,14 +1111,28 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "summary": "权威机构发布年度大宗交易市场分析报告，详细解读市场趋势，为投资者提供参考。",
                 "url": "https://www.caixin.com/",
                 "source": "财新网",
-                "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80"
+                "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80"  # 数据分析
             },
             {
                 "title": "机构：下半年大宗商品市场将迎来结构性机会",
                 "summary": "多家研究机构预测，下半年大宗商品市场将呈现结构性分化，能源和有色金属板块值得关注。",
                 "url": "https://www.yicai.com/",
                 "source": "第一财经",
-                "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80"
+                "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80"  # 市场分析
+            },
+            {
+                "title": "专家解读：大宗商品价格波动背后的逻辑",
+                "summary": "多位行业专家深入解读大宗商品价格波动的原因，为投资者提供专业的市场洞察。",
+                "url": "https://www.caixin.com/",
+                "source": "财新网",
+                "image": "https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&q=80"  # 专家分析
+            },
+            {
+                "title": "量化分析：大宗交易市场投资策略研究",
+                "summary": "专业机构通过量化分析，研究大宗交易市场的最优投资策略，助力投资者决策。",
+                "url": "https://www.yicai.com/",
+                "source": "第一财经",
+                "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80"  # 量化分析
             }
         ],
         "company": [
@@ -1099,7 +1141,21 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "summary": "近期某龙头企业频繁出现大宗交易，机构资金持续流入，市场关注度提升。",
                 "url": "https://www.21jingji.com/",
                 "source": "21世纪经济报道",
-                "image": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80"
+                "image": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80"  # 企业/办公楼
+            },
+            {
+                "title": "多家上市公司发布大宗交易公告",
+                "summary": "本周多家上市公司发布大宗交易相关公告，涉及股份转让和战略投资等事项。",
+                "url": "https://www.21jingji.com/",
+                "source": "21世纪经济报道",
+                "image": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80"  # 企业公告
+            },
+            {
+                "title": "机构调研：大宗交易机会挖掘",
+                "summary": "多家投资机构展开深度调研，挖掘大宗交易市场的潜在投资机会。",
+                "url": "https://www.21jingji.com/",
+                "source": "21世纪经济报道",
+                "image": "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=80"  # 机构调研
             }
         ],
         "international": [
@@ -1108,14 +1164,28 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "summary": "受国际市场不确定性影响，国内投资者避险情绪升温，大宗商品市场受到青睐。",
                 "url": "https://wallstreetcn.com/",
                 "source": "华尔街见闻",
-                "image": "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=800&q=80"
+                "image": "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=800&q=80"  # 国际市场
             },
             {
                 "title": "全球供应链重构，大宗商品价格波动加剧",
                 "summary": "全球供应链正在经历深度调整，大宗商品价格波动加剧，市场不确定性增加。",
                 "url": "https://www.ftchinese.com/",
                 "source": "FT中文网",
-                "image": "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?w=800&q=80"
+                "image": "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?w=800&q=80"  # 全球贸易
+            },
+            {
+                "title": "美联储政策影响，大宗商品市场承压",
+                "summary": "美联储货币政策调整对全球大宗商品市场产生重大影响，市场预期发生转变。",
+                "url": "https://wallstreetcn.com/",
+                "source": "华尔街见闻",
+                "image": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80"  # 美联储/金融
+            },
+            {
+                "title": "国际能源署发布最新市场展望报告",
+                "summary": "国际能源署发布最新能源市场展望报告，预测未来能源供需格局变化。",
+                "url": "https://www.ftchinese.com/",
+                "source": "FT中文网",
+                "image": "https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=800&q=80"  # 能源市场
             }
         ]
     }

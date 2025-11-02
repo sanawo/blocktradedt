@@ -6,6 +6,10 @@ from typing import List, Dict, Any, Optional
 import re
 from datetime import datetime
 from dataclasses import dataclass
+from app.llm import LLM
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -54,21 +58,42 @@ class ReportSummarizer:
             '建议', '推荐', '关注', '谨慎', '积极',
             '配置', '持有', '买入', '卖出'
         ]
+        self.llm = LLM()
+        self.used_ai = False
     
     def summarize(self, report_text: str, max_length: int = 5000) -> ReportSummary:
         """
-        生成研报摘要
-        
-        Args:
-            report_text: 研报文本（5000字以内）
-            max_length: 最大字数限制
-        
-        Returns:
-            ReportSummary: 结构化摘要
+        生成研报摘要 - 优先使用AI，其次使用本地规则
         """
         if len(report_text) > max_length:
             report_text = report_text[:max_length] + "..."
         
+        self.used_ai = False
+        
+        # 优先尝试AI摘要
+        if self.llm.client:
+            try:
+                ai_summary = self.llm.summarize_report(report_text)
+                if ai_summary:
+                    logger.info("使用AI生成研报摘要")
+                    self.used_ai = True
+                    
+                    # 映射AI摘要到ReportSummary
+                    return ReportSummary(
+                        title=ai_summary.get('title', 'AI生成摘要'),
+                        core_viewpoints=ai_summary.get('core_viewpoints', []),
+                        data_support=ai_summary.get('data_support', []),
+                        trend_judgment=ai_summary.get('trend_judgment', '趋势判断不明确'),
+                        key_findings=ai_summary.get('key_findings', []),
+                        risk_analysis=ai_summary.get('risk_analysis', []),
+                        recommendations=ai_summary.get('recommendations', []),
+                        confidence=float(ai_summary.get('confidence', 0.8))
+                    )
+            except Exception as e:
+                logger.warning(f"AI摘要生成失败，回退到本地方法: {e}")
+        
+        # 回退到本地规则摘要
+        logger.info("使用本地规则生成研报摘要")
         try:
             # 提取标题
             title = self._extract_title(report_text)
@@ -110,10 +135,10 @@ class ReportSummarizer:
             )
         
         except Exception as e:
-            # 返回基础摘要
+            logger.error(f"本地摘要生成失败: {e}")
             return ReportSummary(
-                title="未识别标题",
-                core_viewpoints=["文本解析失败"],
+                title="摘要生成失败",
+                core_viewpoints=["解析过程中出现错误"],
                 data_support=[],
                 trend_judgment="无法判断",
                 key_findings=[],
@@ -276,7 +301,8 @@ class ReportSummarizer:
         return min(confidence, 1.0)
     
     def format_summary(self, summary: ReportSummary) -> Dict[str, Any]:
-        """格式化摘要为API响应格式"""
+        """格式化摘要为API响应格式，添加AI使用标识"""
+        ai_indicator = "AI生成" if self.used_ai else "智能提取"
         return {
             'title': summary.title,
             'core_viewpoints': summary.core_viewpoints,
@@ -286,6 +312,7 @@ class ReportSummarizer:
             'risk_analysis': summary.risk_analysis,
             'recommendations': summary.recommendations,
             'confidence': summary.confidence,
+            'generated_by': ai_indicator,
             'timestamp': datetime.now().isoformat()
         }
     
