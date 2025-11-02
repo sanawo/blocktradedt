@@ -31,14 +31,14 @@ class LLM:
             # 尝试初始化智谱AI客户端
             try:
                 # 使用官方zhipuai SDK
-                import zai
+                import zhipuai
                 logger.info("正在初始化智谱AI客户端...")
-                self.client = zai.ZaiAPI(api_key=self.api_key)
+                self.client = zhipuai.ZhipuAI(api_key=self.api_key)
                 logger.info("✅ 智谱AI客户端初始化成功")
                 self.use_old_sdk = False
             except ImportError:
                 # SDK未安装
-                error_msg = "zai SDK未安装，AI功能将不可用。请运行: pip install zai-sdk"
+                error_msg = "zhipuai SDK未安装，AI功能将不可用。请运行: pip install zhipuai"
                 logger.error(error_msg)
                 self.init_error = error_msg
                 self.client = None
@@ -187,7 +187,7 @@ class LLM:
 
 解决方法：
 1. 检查环境变量ZHIPU_API_KEY是否正确配置
-2. 确认已安装zai SDK：pip install zai-sdk
+2. 确认已安装zhipuai SDK：pip install zhipuai
 3. 在Zeabur平台的环境变量中添加：ZHIPU_API_KEY=your_api_key
 4. 重新部署应用以加载环境变量
 5. 获取API密钥：访问 https://open.bigmodel.cn/
@@ -334,120 +334,119 @@ class LLM:
 
 当前状态：已切换到本地回复模式"""
 
-
-def summarize_report(self, report_text: str) -> Optional[Dict[str, Any]]:
-    """
-    使用AI生成研报结构化摘要
-    
-    Args:
-        report_text: 研报文本
+    def summarize_report(self, report_text: str) -> Optional[Dict[str, Any]]:
+        """
+        使用AI生成研报结构化摘要
         
-    Returns:
-        结构化摘要字典，或None如果失败
-    """
-    if not self.client:
-        logger.warning("AI客户端不可用，无法生成AI摘要")
-        return None
-    
-    if len(report_text) > 4000:
-        report_text = report_text[:4000] + "..."
-    
-    system_prompt = """你是一个专业的金融研报分析专家。请仔细分析提供的研报内容，提取关键信息，并生成结构化的摘要。
-    
-    输出必须是有效的JSON格式，不要添加任何额外文本。
-    
-    JSON结构：
-    {
-        "title": "研报标题（如果无法提取，使用'行业研报摘要'）",
-        "core_viewpoints": ["核心观点1", "核心观点2", ...]  // 最多5个
-        "data_support": [
-            {"value": "具体数值", "type": "增长率/价格/产量等"}  // 最多10个关键数据
-        ],
-        "trend_judgment": "对行业/市场的趋势判断（50-100字）",
-        "key_findings": ["关键发现1", "关键发现2", ...]  // 最多5个
-        "risk_analysis": ["风险因素1", "风险因素2", ...]  // 最多5个
-        "recommendations": ["投资建议1", "投资建议2", ...]  // 最多5个
-        "confidence": 0.85  // 置信度，0.0-1.0之间
-    }
-    
-    确保：
-    - 所有观点和建议基于原文
-    - 数据准确引用原文
-    - 语言专业、简洁
-    - 如果信息不足，使用合理推断但保持客观
-    """
-    
-    user_prompt = f"""请分析以下研报内容并生成结构化摘要：
+        Args:
+            report_text: 研报文本
+            
+        Returns:
+            结构化摘要字典，或None如果失败
+        """
+        if not self.client:
+            logger.warning("AI客户端不可用，无法生成AI摘要")
+            return None
+        
+        if len(report_text) > 4000:
+            report_text = report_text[:4000] + "..."
+
+        system_prompt = """你是一个专业的金融研报分析专家。请仔细分析提供的研报内容，提取关键信息，并生成结构化的摘要。
+        
+        输出必须是有效的JSON格式，不要添加任何额外文本。
+        
+        JSON结构：
+        {
+            "title": "研报标题（如果无法提取，使用'行业研报摘要'）",
+            "core_viewpoints": ["核心观点1", "核心观点2", ...]  // 最多5个
+            "data_support": [
+                {"value": "具体数值", "type": "增长率/价格/产量等"}  // 最多10个关键数据
+            ],
+            "trend_judgment": "对行业/市场的趋势判断（50-100字）",
+            "key_findings": ["关键发现1", "关键发现2", ...]  // 最多5个
+            "risk_analysis": ["风险因素1", "风险因素2", ...]  // 最多5个
+            "recommendations": ["投资建议1", "投资建议2", ...]  // 最多5个
+            "confidence": 0.85  // 置信度，0.0-1.0之间
+        }
+        
+        确保：
+        - 所有观点和建议基于原文
+        - 数据准确引用原文
+        - 语言专业、简洁
+        - 如果信息不足，使用合理推断但保持客观
+        """
+        
+        user_prompt = f"""请分析以下研报内容并生成结构化摘要：
 
 {report_text}
 
 请严格按照指定的JSON格式输出，不要添加任何解释或额外文本。"""
-    
-    try:
-        response = self.client.chat.completions.create(
-            model="glm-4-flash",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.3,  # 降低温度以获得更稳定的输出
-            max_tokens=1500,
-            stream=False
-        )
         
-        if hasattr(response, 'choices') and len(response.choices) > 0:
-            content = response.choices[0].message.content.strip()
+        try:
+            response = self.client.chat.completions.create(
+                model="glm-4-flash",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.3,  # 降低温度以获得更稳定的输出
+                max_tokens=1500,
+                stream=False
+            )
             
-            # 尝试解析JSON
-            try:
-                # 清理可能的markdown代码块
-                if content.startswith('```json'):
-                    content = content.replace('```json', '').replace('```', '').strip()
-                elif content.startswith('```'):
-                    content = content.replace('```', '').strip()
+            if hasattr(response, 'choices') and len(response.choices) > 0:
+                content = response.choices[0].message.content.strip()
                 
-                summary_dict = json.loads(content)
-                
-                # 验证和填充默认值
-                if not summary_dict.get('title'):
-                    summary_dict['title'] = '行业研报摘要'
-                if not summary_dict.get('core_viewpoints'):
-                    summary_dict['core_viewpoints'] = []
-                if not summary_dict.get('data_support'):
-                    summary_dict['data_support'] = []
-                if not summary_dict.get('trend_judgment'):
-                    summary_dict['trend_judgment'] = '趋势判断不明确'
-                if not summary_dict.get('key_findings'):
-                    summary_dict['key_findings'] = []
-                if not summary_dict.get('risk_analysis'):
-                    summary_dict['risk_analysis'] = []
-                if not summary_dict.get('recommendations'):
-                    summary_dict['recommendations'] = []
-                if 'confidence' not in summary_dict or not isinstance(summary_dict['confidence'], (int, float)):
-                    summary_dict['confidence'] = 0.7
-                
-                # 限制列表长度
-                summary_dict['core_viewpoints'] = summary_dict['core_viewpoints'][:5]
-                summary_dict['data_support'] = summary_dict['data_support'][:10]
-                summary_dict['key_findings'] = summary_dict['key_findings'][:5]
-                summary_dict['risk_analysis'] = summary_dict['risk_analysis'][:5]
-                summary_dict['recommendations'] = summary_dict['recommendations'][:5]
-                
-                logger.info("AI研报摘要生成成功")
-                return summary_dict
-                
-            except json.JSONDecodeError as e:
-                logger.error(f"AI摘要JSON解析失败: {e}, 内容: {content[:500]}")
+                # 尝试解析JSON
+                try:
+                    # 清理可能的markdown代码块
+                    if content.startswith('```json'):
+                        content = content.replace('```json', '').replace('```', '').strip()
+                    elif content.startswith('```'):
+                        content = content.replace('```', '').strip()
+                    
+                    summary_dict = json.loads(content)
+                    
+                    # 验证和填充默认值
+                    if not summary_dict.get('title'):
+                        summary_dict['title'] = '行业研报摘要'
+                    if not summary_dict.get('core_viewpoints'):
+                        summary_dict['core_viewpoints'] = []
+                    if not summary_dict.get('data_support'):
+                        summary_dict['data_support'] = []
+                    if not summary_dict.get('trend_judgment'):
+                        summary_dict['trend_judgment'] = '趋势判断不明确'
+                    if not summary_dict.get('key_findings'):
+                        summary_dict['key_findings'] = []
+                    if not summary_dict.get('risk_analysis'):
+                        summary_dict['risk_analysis'] = []
+                    if not summary_dict.get('recommendations'):
+                        summary_dict['recommendations'] = []
+                    if 'confidence' not in summary_dict or not isinstance(summary_dict['confidence'], (int, float)):
+                        summary_dict['confidence'] = 0.7
+                    
+                    # 限制列表长度
+                    summary_dict['core_viewpoints'] = summary_dict['core_viewpoints'][:5]
+                    summary_dict['data_support'] = summary_dict['data_support'][:10]
+                    summary_dict['key_findings'] = summary_dict['key_findings'][:5]
+                    summary_dict['risk_analysis'] = summary_dict['risk_analysis'][:5]
+                    summary_dict['recommendations'] = summary_dict['recommendations'][:5]
+                    
+                    logger.info("AI研报摘要生成成功")
+                    return summary_dict
+                    
+                except json.JSONDecodeError as e:
+                    logger.error(f"AI摘要JSON解析失败: {e}, 内容: {content[:500]}")
+                    return None
+            else:
+                logger.warning("AI摘要响应格式异常")
                 return None
-        else:
-            logger.warning("AI摘要响应格式异常")
+                
+        except Exception as e:
+            logger.error(f"AI摘要生成失败: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return None
-            
-    except Exception as e:
-        logger.error(f"AI摘要生成失败: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return None
 
 
 
