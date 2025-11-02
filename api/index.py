@@ -428,7 +428,6 @@ AI状态：{ai_status}"""
                         message,
                         context=chat_request.conversation_history if chat_request.conversation_history else None,
                         system_prompt=chat_request.system_prompt if chat_request.system_prompt else None,
-                        enable_thinking=chat_request.enable_thinking if chat_request.enable_thinking is not None else True,
                         stream=chat_request.stream if chat_request.stream is not None else False
                     )
                     logger.info(f"AI响应长度: {len(ai_response) if ai_response else 0}")
