@@ -31,14 +31,14 @@ class LLM:
             # 尝试初始化智谱AI客户端
             try:
                 # 使用官方zhipuai SDK
-                import zhipuai
+                import zai
                 logger.info("正在初始化智谱AI客户端...")
-                self.client = zhipuai.ZhipuAI(api_key=self.api_key)
+                self.client = zai.ZaiAPI(api_key=self.api_key)
                 logger.info("✅ 智谱AI客户端初始化成功")
                 self.use_old_sdk = False
             except ImportError:
                 # SDK未安装
-                error_msg = "zhipuai SDK未安装，AI功能将不可用。请运行: pip install zhipuai"
+                error_msg = "zai SDK未安装，AI功能将不可用。请运行: pip install zai-sdk"
                 logger.error(error_msg)
                 self.init_error = error_msg
                 self.client = None
@@ -187,7 +187,7 @@ class LLM:
 
 解决方法：
 1. 检查环境变量ZHIPU_API_KEY是否正确配置
-2. 确认已安装zhipuai SDK：pip install zhipuai
+2. 确认已安装zai SDK：pip install zai-sdk
 3. 在Zeabur平台的环境变量中添加：ZHIPU_API_KEY=your_api_key
 4. 重新部署应用以加载环境变量
 5. 获取API密钥：访问 https://open.bigmodel.cn/
