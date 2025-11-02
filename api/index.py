@@ -1169,7 +1169,7 @@ async def summarize_report_api(
             "success": False,
             "error": str(e),
             "timestamp": datetime.now().isoformat()
-    }
+        }
 
 @app.get("/api/stock/{stock_code}")
 async def get_stock_detail(stock_code: str):
