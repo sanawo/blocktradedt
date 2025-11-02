@@ -350,6 +350,7 @@ AI状态：{ai_status}
             # 如果配置了AI客户端，尝试使用GLM-4.5-Flash（但确保有fallback）
             if llm.client:
                 try:
+                    logger.info(f"尝试调用AI客户端，消息长度: {len(message)}")
                     ai_response = llm.chat(
                         message,
                         context=chat_request.conversation_history if chat_request.conversation_history else None,
@@ -357,14 +358,20 @@ AI状态：{ai_status}
                         enable_thinking=chat_request.enable_thinking if chat_request.enable_thinking is not None else True,
                         stream=chat_request.stream if chat_request.stream is not None else False
                     )
+                    logger.info(f"AI响应长度: {len(ai_response) if ai_response else 0}")
                     # 只有在返回有效内容时才使用AI回复
-                    if ai_response and ai_response.strip() and "暂时不可用" not in ai_response and "检查API密钥" not in ai_response:
+                    if ai_response and ai_response.strip() and "暂时不可用" not in ai_response and "检查API密钥" not in ai_response and "❌" not in ai_response:
+                        logger.info("使用AI回复")
                         response = ai_response
+                    else:
+                        logger.warning(f"AI回复无效，使用本地回复。AI回复: {ai_response[:100] if ai_response else 'None'}")
                 except Exception as e:
-                    logger.warning(f"AI客户端调用失败，使用本地回复: {e}")
+                    logger.error(f"AI客户端调用失败，使用本地回复: {e}")
                     import traceback
-                    logger.warning(traceback.format_exc())
+                    logger.error(traceback.format_exc())
                     # 继续使用本地回复
+            else:
+                logger.info(f"AI客户端未初始化，使用本地回复。错误: {llm.init_error if hasattr(llm, 'init_error') else '未知'}")
         
         except Exception as e:
             logger.error(f"生成回复失败: {e}")
