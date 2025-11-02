@@ -1375,6 +1375,27 @@ async def get_stock_detail(stock_code: str):
             # 限制最多返回20条记录
             stock_records = stock_records[:20]
         
+        # 尝试从记录中获取股票名称
+        stock_name = None
+        if stock_records and len(stock_records) > 0:
+            stock_name = stock_records[0].get("name")
+        
+        # 如果没有找到记录或名称，尝试从热门股票中查找
+        if not stock_name:
+            try:
+                from app.ths_scraper import get_ths_popular_stocks
+                popular_stocks = get_ths_popular_stocks(limit=100)
+                for stock in popular_stocks:
+                    if stock.get("code") == stock_code:
+                        stock_name = stock.get("name")
+                        break
+            except:
+                pass
+        
+        # 如果还是没有找到名称，使用默认名称
+        if not stock_name:
+            stock_name = f"股票{stock_code}"
+        
         # 如果没有找到记录，生成模拟数据
         if not stock_records:
             # 生成模拟的大宗交易记录
@@ -1385,7 +1406,7 @@ async def get_stock_detail(stock_code: str):
                 stock_records.append({
                     "date": trade_date,
                     "code": stock_code,
-                    "name": f"股票{stock_code}",
+                    "name": stock_name,
                     "trade_price": round(base_price, 2),
                     "close_price": round(base_price * random.uniform(0.95, 1.05), 2),
                     "volume": round(random.uniform(10, 500), 2),
@@ -1400,9 +1421,58 @@ async def get_stock_detail(stock_code: str):
         change = random.uniform(-5, 5)
         change_percent = (change / base_price) * 100
         
+        # 生成K线图数据（过去30天）
+        kline_data = []
+        current_price = base_price
+        for i in range(30, -1, -1):
+            date = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
+            # 模拟价格波动
+            daily_change = random.uniform(-0.05, 0.05)
+            current_price = current_price * (1 + daily_change)
+            
+            open_price = current_price * random.uniform(0.98, 1.02)
+            close_price = current_price * random.uniform(0.98, 1.02)
+            high_price = max(open_price, close_price) * random.uniform(1.0, 1.03)
+            low_price = min(open_price, close_price) * random.uniform(0.97, 1.0)
+            volume = random.randint(1000000, 100000000)
+            
+            kline_data.append({
+                "date": date,
+                "open": round(open_price, 2),
+                "close": round(close_price, 2),
+                "high": round(high_price, 2),
+                "low": round(low_price, 2),
+                "volume": volume
+            })
+        
+        # 计算均线
+        # 日线（MA5）
+        ma5 = []
+        for i in range(len(kline_data)):
+            if i < 4:
+                ma5.append(None)
+            else:
+                ma5.append(round(sum([kline_data[j]["close"] for j in range(i-4, i+1)]) / 5, 2))
+        
+        # 7日均线（MA7）
+        ma7 = []
+        for i in range(len(kline_data)):
+            if i < 6:
+                ma7.append(None)
+            else:
+                ma7.append(round(sum([kline_data[j]["close"] for j in range(i-6, i+1)]) / 7, 2))
+        
+        # 月均线（MA30）
+        ma30 = []
+        for i in range(len(kline_data)):
+            if i < 29:
+                ma30.append(None)
+            else:
+                ma30.append(round(sum([kline_data[j]["close"] for j in range(i-29, i+1)]) / 30, 2))
+        
         stock_data = {
             "code": stock_code,
-            "name": f"股票{stock_code}",  # 实际应该从API获取真实名称
+            "name": stock_name,
             "price": round(base_price, 2),
             "change": round(change, 2),
             "change_percent": round(change_percent, 2),
@@ -1419,7 +1489,11 @@ async def get_stock_detail(stock_code: str):
             "pb_ratio": round(random.uniform(1, 5), 2),
             "total_shares": random.randint(100000, 10000000),
             "circulating_shares": random.randint(50000, 5000000),
-            "trading_records": stock_records
+            "trading_records": stock_records,
+            "kline_data": kline_data,
+            "ma5": ma5,
+            "ma7": ma7,
+            "ma30": ma30
         }
         
         return {
