@@ -135,39 +135,49 @@ async def health_check():
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     if templates is None:
-        return HTMLResponse("<h1>Block Trade DT API</h1><p>模板系统未加载，请使用 API 端点</p>")
-    return templates.TemplateResponse("index_v2.html", {"request": request})
+        return HTMLResponse("<h1>Block Trade DT API</h1><p>模板系统未加载，请使用 API 端点</p>", media_type="text/html; charset=utf-8")
+    response = templates.TemplateResponse("index_v2.html", {"request": request})
+    response.charset = "utf-8"
+    return response
 
 # 趋势页面（深色模式）
 @app.get("/trends", response_class=HTMLResponse)
 async def trends_page(request: Request):
     if templates is None:
-        return HTMLResponse("<h1>Trends</h1><p>模板系统未加载</p>")
-    return templates.TemplateResponse("trends_dark.html", {"request": request})
+        return HTMLResponse("<h1>Trends</h1><p>模板系统未加载</p>", media_type="text/html; charset=utf-8")
+    response = templates.TemplateResponse("trends_dark.html", {"request": request})
+    response.charset = "utf-8"
+    return response
 
 # 新闻页面
 @app.get("/news", response_class=HTMLResponse)
 async def news_page(request: Request):
     if templates is None:
-        return HTMLResponse("<h1>News</h1><p>模板系统未加载</p>")
-    return templates.TemplateResponse("news.html", {"request": request})
+        return HTMLResponse("<h1>News</h1><p>模板系统未加载</p>", media_type="text/html; charset=utf-8")
+    response = templates.TemplateResponse("news.html", {"request": request})
+    response.charset = "utf-8"
+    return response
 
 # 研报摘要页面
 @app.get("/report", response_class=HTMLResponse)
 async def report_summarizer_page(request: Request):
     if templates is None:
-        return HTMLResponse("<h1>研报摘要生成器</h1><p>模板系统未加载</p>")
-    return templates.TemplateResponse("report_summarizer.html", {"request": request})
+        return HTMLResponse("<h1>研报摘要生成器</h1><p>模板系统未加载</p>", media_type="text/html; charset=utf-8")
+    response = templates.TemplateResponse("report_summarizer.html", {"request": request})
+    response.charset = "utf-8"
+    return response
 
 @app.get("/stock/{stock_code}", response_class=HTMLResponse)
 async def stock_detail_page(request: Request, stock_code: str):
     """股票详情页面"""
     if templates is None:
-        return HTMLResponse(f"<h1>股票详情</h1><p>模板系统未加载</p><p>股票代码: {stock_code}</p>")
-    return templates.TemplateResponse("stock_detail.html", {
+        return HTMLResponse(f"<h1>股票详情</h1><p>模板系统未加载</p><p>股票代码: {stock_code}</p>", media_type="text/html; charset=utf-8")
+    response = templates.TemplateResponse("stock_detail.html", {
         "request": request,
         "stock_code": stock_code
     })
+    response.charset = "utf-8"
+    return response
 
 # API路由
 @app.post("/api/register")
@@ -293,15 +303,6 @@ async def api_news_latest(limit: int = 6):
         "https://www.csrc.gov.cn/"
     ]
     
-    news_images = [
-        "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80",
-        "https://images.unsplash.com/photo-1565372195458-9de0b320ef04?w=800&q=80",
-        "https://images.unsplash.com/photo-1639762681057-408e52192e55?w=800&q=80",
-        "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&q=80",
-        "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
-        "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80"
-    ]
-    
     sources = ["新浪财经", "财经网", "腾讯财经", "国家发改委", "财新网", "证监会"]
     
     news_list = []
@@ -315,8 +316,7 @@ async def api_news_latest(limit: int = 6):
             "summary": news_summaries[i],
             "source": sources[i],
             "time": news_time.strftime("%Y-%m-%d %H:%M"),
-            "url": news_urls[i],
-            "image": news_images[i]
+            "url": news_urls[i]
         }
         news_list.append(news_item)
     
@@ -438,6 +438,7 @@ AI状态：{ai_status}"""
                         message,
                         context=chat_request.conversation_history if chat_request.conversation_history else None,
                         system_prompt=chat_request.system_prompt if chat_request.system_prompt else None,
+                        enable_thinking=chat_request.enable_thinking if chat_request.enable_thinking is not None else True,
                         stream=chat_request.stream if chat_request.stream is not None else False
                     )
                     logger.info(f"AI响应长度: {len(ai_response) if ai_response else 0}")
@@ -452,7 +453,7 @@ AI状态：{ai_status}"""
                         # 如果AI返回错误信息，将其添加到响应中
                         if ai_response and "❌" in ai_response:
                             response = f"{response}\n\n{ai_response}"
-                except Exception as e:
+    except Exception as e:
                     error_msg = str(e)
                     logger.error(f"AI客户端调用失败: {error_msg}")
                     import traceback
@@ -532,13 +533,13 @@ async def analyze_market_with_ai():
         import random
         
         # 生成市场统计数据（避免循环依赖）
-        stats = {
-            "total_volume": round(random.uniform(50, 100), 2),
-            "total_transactions": random.randint(100, 500),
-            "avg_price": round(random.uniform(-2, 2), 2),
-            "active_sellers": random.randint(50, 150)
-        }
-        
+    stats = {
+        "total_volume": round(random.uniform(50, 100), 2),
+        "total_transactions": random.randint(100, 500),
+        "avg_price": round(random.uniform(-2, 2), 2),
+        "active_sellers": random.randint(50, 150)
+    }
+    
         # 使用本地AI生成分析
         analysis_query = f"请分析以下市场数据：{stats}"
         analysis = generate_local_ai_response(analysis_query)
@@ -920,7 +921,7 @@ async def get_trends_data():
             "active_stocks_change": round(random.uniform(-5, 8), 2),
         }
 
-        categories = [
+    categories = [
             {"name": "热门钢材", "count": round(random.uniform(1200, 2600), 2), "change": round(random.uniform(-3, 6), 2)},
             {"name": "能源化工", "count": round(random.uniform(900, 2000), 2), "change": round(random.uniform(-3, 6), 2)},
             {"name": "有色金属", "count": round(random.uniform(700, 1800), 2), "change": round(random.uniform(-3, 6), 2)},
@@ -928,7 +929,7 @@ async def get_trends_data():
             {"name": "建材", "count": round(random.uniform(400, 1200), 2), "change": round(random.uniform(-3, 6), 2)},
         ]
 
-        regions = [
+    regions = [
             {"name": "华东营业部", "count": random.randint(40, 90), "percentage": round(random.uniform(25, 35), 1), "change": round(random.uniform(-2, 4), 2)},
             {"name": "华南营业部", "count": random.randint(30, 70), "percentage": round(random.uniform(18, 28), 1), "change": round(random.uniform(-2, 4), 2)},
             {"name": "华北营业部", "count": random.randint(30, 60), "percentage": round(random.uniform(15, 25), 1), "change": round(random.uniform(-2, 4), 2)},
@@ -948,15 +949,15 @@ async def get_trends_data():
                 "d30": {"labels": [f"近30日-{i}" for i in range(30)], "values": [round(3500 + random.uniform(-80, 80), 2) for _ in range(30)]},
             }
         }
-        
-        return {
-            "stats": stats,
+    
+    return {
+        "stats": stats,
             "charts": fallback_charts,
-            "time_labels": time_labels,
-            "transaction_volumes": transaction_volumes,
-            "price_trends": price_trends,
-            "categories": categories,
-            "regions": regions,
+        "time_labels": time_labels,
+        "transaction_volumes": transaction_volumes,
+        "price_trends": price_trends,
+        "categories": categories,
+        "regions": regions,
             "last_update": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "data_source": "模拟数据"
         }
@@ -1045,7 +1046,7 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
     import random
     from datetime import timedelta
     
-    # 新闻数据源配置 - 每个新闻都有独特的图片
+    # 新闻数据源配置
     news_sources = {
         "market": [
             {
@@ -1053,35 +1054,21 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "summary": "近期A股市场大宗交易活跃度显著提升，单日成交额突破100亿元大关，显示出机构投资者对市场前景的信心增强。",
                 "url": "https://finance.sina.com.cn/stock/marketresearch/",
                 "source": "新浪财经",
-                "image": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80"  # 股票交易图表
+                "image": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80"
             },
             {
                 "title": "钢材价格持续上涨，市场供需关系紧张",
                 "summary": "受供应链紧张和需求增长双重影响，近期钢材价格持续上涨，市场预期后续仍有上涨空间。",
                 "url": "https://www.eastmoney.com/",
                 "source": "财经网",
-                "image": "https://images.unsplash.com/photo-1565372195458-9de0b320ef04?w=800&q=80"  # 钢材/工业
+                "image": "https://images.unsplash.com/photo-1565372195458-9de0b320ef04?w=800&q=80"
             },
             {
                 "title": "有色金属板块领涨，铜价突破历史新高",
                 "summary": "有色金属板块表现强劲，铜价突破历史新高，专家建议关注相关投资机会。",
                 "url": "https://finance.qq.com/",
                 "source": "腾讯财经",
-                "image": "https://images.unsplash.com/photo-1639762681057-408e52192e55?w=800&q=80"  # 有色金属
-            },
-            {
-                "title": "煤炭市场供需平衡，价格稳中有升",
-                "summary": "随着冬季用煤需求增加，煤炭市场供需关系趋于平衡，价格呈现稳中有升的态势。",
-                "url": "https://finance.sina.com.cn/",
-                "source": "新浪财经",
-                "image": "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&q=80"  # 煤炭/能源
-            },
-            {
-                "title": "原油期货价格震荡上行，市场关注OPEC+决策",
-                "summary": "国际原油期货价格呈现震荡上行趋势，市场密切关注OPEC+组织的产量决策。",
-                "url": "https://finance.qq.com/",
-                "source": "腾讯财经",
-                "image": "https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=800&q=80"  # 原油/能源
+                "image": "https://images.unsplash.com/photo-1639762681057-408e52192e55?w=800&q=80"
             }
         ],
         "policy": [
@@ -1090,28 +1077,14 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "summary": "国家发改委出台新政策，加强大宗商品价格监管，维护市场秩序，促进经济稳定发展。",
                 "url": "https://www.ndrc.gov.cn/",
                 "source": "国家发改委",
-                "image": "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&q=80"  # 政策/政府
+                "image": "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&q=80"
             },
             {
                 "title": "证监会优化大宗交易制度，提升市场效率",
                 "summary": "证监会发布通知，进一步优化大宗交易制度，简化交易流程，提升市场效率。",
                 "url": "https://www.csrc.gov.cn/",
                 "source": "证监会",
-                "image": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80"  # 金融监管
-            },
-            {
-                "title": "央行发布货币政策报告，强调稳健中性",
-                "summary": "央行发布最新货币政策执行报告，强调保持货币政策稳健中性，为实体经济提供有力支持。",
-                "url": "https://www.pbc.gov.cn/",
-                "source": "央行",
-                "image": "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&q=80"  # 货币政策
-            },
-            {
-                "title": "财政部：加大减税降费力度，支持实体经济发展",
-                "summary": "财政部表示将继续加大减税降费力度，进一步减轻企业负担，支持实体经济发展。",
-                "url": "https://www.mof.gov.cn/",
-                "source": "财政部",
-                "image": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80"  # 财政政策
+                "image": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80"
             }
         ],
         "analysis": [
@@ -1120,28 +1093,14 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "summary": "权威机构发布年度大宗交易市场分析报告，详细解读市场趋势，为投资者提供参考。",
                 "url": "https://www.caixin.com/",
                 "source": "财新网",
-                "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80"  # 数据分析
+                "image": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80"
             },
             {
                 "title": "机构：下半年大宗商品市场将迎来结构性机会",
                 "summary": "多家研究机构预测，下半年大宗商品市场将呈现结构性分化，能源和有色金属板块值得关注。",
                 "url": "https://www.yicai.com/",
                 "source": "第一财经",
-                "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80"  # 市场分析
-            },
-            {
-                "title": "专家解读：大宗商品价格波动背后的逻辑",
-                "summary": "多位行业专家深入解读大宗商品价格波动的原因，为投资者提供专业的市场洞察。",
-                "url": "https://www.caixin.com/",
-                "source": "财新网",
-                "image": "https://images.unsplash.com/photo-1551434678-e076c223a692?w=800&q=80"  # 专家分析
-            },
-            {
-                "title": "量化分析：大宗交易市场投资策略研究",
-                "summary": "专业机构通过量化分析，研究大宗交易市场的最优投资策略，助力投资者决策。",
-                "url": "https://www.yicai.com/",
-                "source": "第一财经",
-                "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80"  # 量化分析
+                "image": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80"
             }
         ],
         "company": [
@@ -1150,21 +1109,7 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "summary": "近期某龙头企业频繁出现大宗交易，机构资金持续流入，市场关注度提升。",
                 "url": "https://www.21jingji.com/",
                 "source": "21世纪经济报道",
-                "image": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80"  # 企业/办公楼
-            },
-            {
-                "title": "多家上市公司发布大宗交易公告",
-                "summary": "本周多家上市公司发布大宗交易相关公告，涉及股份转让和战略投资等事项。",
-                "url": "https://www.21jingji.com/",
-                "source": "21世纪经济报道",
-                "image": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80"  # 企业公告
-            },
-            {
-                "title": "机构调研：大宗交易机会挖掘",
-                "summary": "多家投资机构展开深度调研，挖掘大宗交易市场的潜在投资机会。",
-                "url": "https://www.21jingji.com/",
-                "source": "21世纪经济报道",
-                "image": "https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&q=80"  # 机构调研
+                "image": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&q=80"
             }
         ],
         "international": [
@@ -1173,28 +1118,14 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
                 "summary": "受国际市场不确定性影响，国内投资者避险情绪升温，大宗商品市场受到青睐。",
                 "url": "https://wallstreetcn.com/",
                 "source": "华尔街见闻",
-                "image": "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=800&q=80"  # 国际市场
+                "image": "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=800&q=80"
             },
             {
                 "title": "全球供应链重构，大宗商品价格波动加剧",
                 "summary": "全球供应链正在经历深度调整，大宗商品价格波动加剧，市场不确定性增加。",
                 "url": "https://www.ftchinese.com/",
                 "source": "FT中文网",
-                "image": "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?w=800&q=80"  # 全球贸易
-            },
-            {
-                "title": "美联储政策影响，大宗商品市场承压",
-                "summary": "美联储货币政策调整对全球大宗商品市场产生重大影响，市场预期发生转变。",
-                "url": "https://wallstreetcn.com/",
-                "source": "华尔街见闻",
-                "image": "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=800&q=80"  # 美联储/金融
-            },
-            {
-                "title": "国际能源署发布最新市场展望报告",
-                "summary": "国际能源署发布最新能源市场展望报告，预测未来能源供需格局变化。",
-                "url": "https://www.ftchinese.com/",
-                "source": "FT中文网",
-                "image": "https://images.unsplash.com/photo-1547036967-23d11aacaee0?w=800&q=80"  # 能源市场
+                "image": "https://images.unsplash.com/photo-1579532537598-459ecdaf39cc?w=800&q=80"
             }
         ]
     }
@@ -1375,27 +1306,6 @@ async def get_stock_detail(stock_code: str):
             # 限制最多返回20条记录
             stock_records = stock_records[:20]
         
-        # 尝试从记录中获取股票名称
-        stock_name = None
-        if stock_records and len(stock_records) > 0:
-            stock_name = stock_records[0].get("name")
-        
-        # 如果没有找到记录或名称，尝试从热门股票中查找
-        if not stock_name:
-            try:
-                from app.ths_scraper import get_ths_popular_stocks
-                popular_stocks = get_ths_popular_stocks(limit=100)
-                for stock in popular_stocks:
-                    if stock.get("code") == stock_code:
-                        stock_name = stock.get("name")
-                        break
-            except:
-                pass
-        
-        # 如果还是没有找到名称，使用默认名称
-        if not stock_name:
-            stock_name = f"股票{stock_code}"
-        
         # 如果没有找到记录，生成模拟数据
         if not stock_records:
             # 生成模拟的大宗交易记录
@@ -1406,7 +1316,7 @@ async def get_stock_detail(stock_code: str):
                 stock_records.append({
                     "date": trade_date,
                     "code": stock_code,
-                    "name": stock_name,
+                    "name": f"股票{stock_code}",
                     "trade_price": round(base_price, 2),
                     "close_price": round(base_price * random.uniform(0.95, 1.05), 2),
                     "volume": round(random.uniform(10, 500), 2),
@@ -1421,58 +1331,9 @@ async def get_stock_detail(stock_code: str):
         change = random.uniform(-5, 5)
         change_percent = (change / base_price) * 100
         
-        # 生成K线图数据（过去30天）
-        kline_data = []
-        current_price = base_price
-        for i in range(30, -1, -1):
-            date = (datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d')
-            # 模拟价格波动
-            daily_change = random.uniform(-0.05, 0.05)
-            current_price = current_price * (1 + daily_change)
-            
-            open_price = current_price * random.uniform(0.98, 1.02)
-            close_price = current_price * random.uniform(0.98, 1.02)
-            high_price = max(open_price, close_price) * random.uniform(1.0, 1.03)
-            low_price = min(open_price, close_price) * random.uniform(0.97, 1.0)
-            volume = random.randint(1000000, 100000000)
-            
-            kline_data.append({
-                "date": date,
-                "open": round(open_price, 2),
-                "close": round(close_price, 2),
-                "high": round(high_price, 2),
-                "low": round(low_price, 2),
-                "volume": volume
-            })
-        
-        # 计算均线
-        # 日线（MA5）
-        ma5 = []
-        for i in range(len(kline_data)):
-            if i < 4:
-                ma5.append(None)
-            else:
-                ma5.append(round(sum([kline_data[j]["close"] for j in range(i-4, i+1)]) / 5, 2))
-        
-        # 7日均线（MA7）
-        ma7 = []
-        for i in range(len(kline_data)):
-            if i < 6:
-                ma7.append(None)
-            else:
-                ma7.append(round(sum([kline_data[j]["close"] for j in range(i-6, i+1)]) / 7, 2))
-        
-        # 月均线（MA30）
-        ma30 = []
-        for i in range(len(kline_data)):
-            if i < 29:
-                ma30.append(None)
-            else:
-                ma30.append(round(sum([kline_data[j]["close"] for j in range(i-29, i+1)]) / 30, 2))
-        
         stock_data = {
             "code": stock_code,
-            "name": stock_name,
+            "name": f"股票{stock_code}",  # 实际应该从API获取真实名称
             "price": round(base_price, 2),
             "change": round(change, 2),
             "change_percent": round(change_percent, 2),
@@ -1489,11 +1350,7 @@ async def get_stock_detail(stock_code: str):
             "pb_ratio": round(random.uniform(1, 5), 2),
             "total_shares": random.randint(100000, 10000000),
             "circulating_shares": random.randint(50000, 5000000),
-            "trading_records": stock_records,
-            "kline_data": kline_data,
-            "ma5": ma5,
-            "ma7": ma7,
-            "ma30": ma30
+            "trading_records": stock_records
         }
         
         return {
