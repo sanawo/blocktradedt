@@ -4,7 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ stock_name }} ({{ stock_code }}) - 股票详情</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+  
   <style>
     * {
       margin: 0;
@@ -171,30 +175,6 @@
       text-align: right;
     }
 
-    /* K线图容器 */
-    .chart-container {
-      background: #fff;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
-    }
-
-    .chart-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 20px;
-      padding-bottom: 12px;
-      border-bottom: 2px solid #1890ff;
-    }
-
-    .chart-wrapper {
-      position: relative;
-      height: 400px;
-      width: 100%;
-    }
-
     /* 交易数据表格 */
     .trading-table {
       background: #fff;
@@ -293,14 +273,6 @@
       <div class="loading">
         <div class="spinner"></div>
         <div>加载中...</div>
-      </div>
-    </div>
-
-    <!-- K线图 -->
-    <div class="chart-container" id="chartContainer" style="display: none;">
-      <div class="chart-title">📈 K线图（含日、7日、月均线）</div>
-      <div class="chart-wrapper">
-        <canvas id="klineChart"></canvas>
       </div>
     </div>
 
@@ -410,10 +382,8 @@
           renderStockHeader(data.data);
           renderStockData(data.data);
           renderTradingRecords(data.data.trading_records || []);
-          renderKlineChart(data.data);
           
           document.getElementById('stockHeader').style.display = 'block';
-          document.getElementById('chartContainer').style.display = 'block';
           document.getElementById('dataSection').style.display = 'grid';
           document.getElementById('tradingTable').style.display = 'block';
         } else {
@@ -520,159 +490,6 @@
         return (num / 10000).toFixed(2) + '万元';
       }
       return num.toFixed(2) + '元';
-    }
-
-    let klineChart = null;
-
-    function renderKlineChart(data) {
-      if (!data.kline_data || !data.kline_data.length) {
-        return;
-      }
-
-      const ctx = document.getElementById('klineChart');
-      if (!ctx) return;
-
-      // 销毁之前的图表
-      if (klineChart) {
-        klineChart.destroy();
-      }
-
-      const labels = data.kline_data.map(item => item.date);
-      const closes = data.kline_data.map(item => item.close);
-      const highs = data.kline_data.map(item => item.high);
-      const lows = data.kline_data.map(item => item.low);
-      const opens = data.kline_data.map(item => item.open);
-      const volumes = data.kline_data.map(item => item.volume);
-
-      // 准备K线数据（OHLC）
-      const klineDatasets = [];
-      for (let i = 0; i < labels.length; i++) {
-        const isUp = closes[i] >= opens[i];
-        klineDatasets.push({
-          x: i,
-          o: opens[i],
-          h: highs[i],
-          l: lows[i],
-          c: closes[i],
-          v: volumes[i],
-          color: isUp ? '#f5222d' : '#52c41a'
-        });
-      }
-
-      // 创建组合图表
-      klineChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: '收盘价',
-              data: closes,
-              borderColor: '#1890ff',
-              backgroundColor: 'rgba(24, 144, 255, 0.1)',
-              borderWidth: 2,
-              pointRadius: 0,
-              tension: 0.1,
-              yAxisID: 'y'
-            },
-            {
-              label: 'MA5 (5日均线)',
-              data: data.ma5 || [],
-              borderColor: '#ff4d4f',
-              backgroundColor: 'transparent',
-              borderWidth: 1.5,
-              pointRadius: 0,
-              borderDash: [5, 5],
-              tension: 0.1,
-              yAxisID: 'y'
-            },
-            {
-              label: 'MA7 (7日均线)',
-              data: data.ma7 || [],
-              borderColor: '#faad14',
-              backgroundColor: 'transparent',
-              borderWidth: 1.5,
-              pointRadius: 0,
-              borderDash: [3, 3],
-              tension: 0.1,
-              yAxisID: 'y'
-            },
-            {
-              label: 'MA30 (月均线)',
-              data: data.ma30 || [],
-              borderColor: '#722ed1',
-              backgroundColor: 'transparent',
-              borderWidth: 1.5,
-              pointRadius: 0,
-              borderDash: [10, 5],
-              tension: 0.1,
-              yAxisID: 'y'
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: {
-            mode: 'index',
-            intersect: false,
-          },
-          plugins: {
-            legend: {
-              display: true,
-              position: 'top',
-              labels: {
-                usePointStyle: true,
-                padding: 15,
-                font: {
-                  size: 12
-                }
-              }
-            },
-            tooltip: {
-              enabled: true,
-              mode: 'index',
-              intersect: false,
-              callbacks: {
-                label: function(context) {
-                  const datasetLabel = context.dataset.label || '';
-                  const value = context.parsed.y;
-                  if (value === null || value === undefined) return '';
-                  return `${datasetLabel}: ${value.toFixed(2)}`;
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              display: true,
-              title: {
-                display: true,
-                text: '日期'
-              },
-              ticks: {
-                maxRotation: 45,
-                minRotation: 45,
-                maxTicksLimit: 10
-              }
-            },
-            y: {
-              type: 'linear',
-              display: true,
-              position: 'left',
-              title: {
-                display: true,
-                text: '价格'
-              },
-              ticks: {
-                callback: function(value) {
-                  return value.toFixed(2);
-                }
-              }
-            }
-          }
-        }
-      });
     }
 
     function showError(message) {
