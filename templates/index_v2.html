@@ -12,26 +12,26 @@
   <!-- CSS -->
   <link rel="stylesheet" href="/static/styles_v2.css" />
   
-  <!-- 外部库 -->
+  <!-- 外部�?-->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
   
-  <!-- 懒加载 -->
+  <!-- 懒加�?-->
   <script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload@17.8.5/dist/lazyload.min.js"></script>
 </head>
 <body>
-  <!-- 自定义光标 -->
+  <!-- 自定义光�?-->
   <div class="custom-cursor">
     <div class="cursor-dot"></div>
     <div class="cursor-outline"></div>
   </div>
 
-  <!-- 固定导航栏 -->
+  <!-- 固定导航�?-->
   <header class="fixed-header" id="mainHeader">
     <div class="header-container">
       <div class="logo">
-        <span class="logo-icon">📊</span>
+        <img src="/static/logo.svg" alt="Block Trade DT" class="logo-icon" />
         <span class="logo-text">Block Trade DT</span>
       </div>
       
@@ -58,7 +58,7 @@
     </div>
   </header>
 
-  <!-- 滑动导航指示器 -->
+  <!-- 滑动导航指示�?-->
   <div class="scroll-indicator">
     <div class="indicator-item active" data-target="hero"></div>
     <div class="indicator-item" data-target="data"></div>
@@ -69,13 +69,13 @@
   <!-- 主要内容区域 - 全屏滑动分屏 -->
   <main class="fullpage-container">
     
-    <!-- 第一屏：英雄区 -->
+    <!-- 第一屏：英雄�?-->
     <section class="section hero-section" id="hero" data-anchor="hero">
       <div class="hero-background">
         <img 
           class="lazy hero-bg-image" 
           data-src="/static/custom_logo.svg" 
-          alt="基于大语言模型技术的线上大宗交易检索平台"
+          alt="基于大语言模型技术的线上大宗交易检索平�?
         />
         <div class="hero-overlay"></div>
       </div>
@@ -83,12 +83,12 @@
       <div class="hero-content">
         <div class="hero-badge animate-fade-in">
           <span class="badge-dot"></span>
-          <span>实时更新中</span>
+          <span>实时更新�?/span>
         </div>
         
         <h1 class="hero-title animate-slide-up">
           基于大语言模型技术的<br/>
-          <span class="gradient-text">线上大宗交易检索平台</span>
+          <span class="gradient-text">线上大宗交易检索平�?/span>
         </h1>
         
         <p class="hero-subtitle animate-slide-up delay-1">
@@ -106,14 +106,14 @@
           </div>
           <div class="stat-item">
             <div class="stat-value" data-value="98">0</div>
-            <div class="stat-label">准确率%</div>
+            <div class="stat-label">准确�?</div>
           </div>
         </div>
         
         <div class="hero-actions animate-slide-up delay-3">
           <button class="btn btn-primary btn-large" onclick="scrollToSection('data')">
-            <span>开始探索</span>
-            <span class="btn-arrow">→</span>
+            <span>开始探�?/span>
+            <span class="btn-arrow">�?/span>
           </button>
           <button class="btn btn-outline btn-large" onclick="scrollToSection('analysis')">
             <span>智能分析</span>
@@ -160,12 +160,12 @@
             </div>
           </div>
           
-          <!-- 交易量卡片 -->
+          <!-- 交易量卡�?-->
           <div class="data-card card-hover" data-tilt>
             <div class="card-icon">💰</div>
             <h3>总成交额</h3>
             <div class="card-value">
-              <span class="value-number">4567.89<small>亿</small></span>
+              <span class="value-number">4567.89<small>�?/small></span>
               <span class="value-change positive">+12.5%</span>
             </div>
             <div class="card-progress">
@@ -178,7 +178,7 @@
             <div class="card-icon">🏢</div>
             <h3>活跃股票</h3>
             <div class="card-value">
-              <span class="value-number">2,847<small>只</small></span>
+              <span class="value-number">2,847<small>�?/small></span>
               <span class="value-change positive">+15</span>
             </div>
             <div class="card-tags">
@@ -193,7 +193,7 @@
             <div class="card-icon">🤖</div>
             <h3>AI智能推荐</h3>
             <div class="ai-insight">
-              <p>基于大数据分析，今日钢材类交易活跃度提升32%，建议重点关注...</p>
+              <p>基于大数据分析，今日钢材类交易活跃度提升32%，建议重点关�?..</p>
             </div>
             <button class="btn btn-sm btn-primary" onclick="scrollToSection('analysis')">
               查看详情
@@ -210,14 +210,14 @@
                 <tr>
                   <th>排名</th>
                   <th>证券代码</th>
-                  <th>证券简称</th>
+                  <th>证券简�?/th>
                   <th>最新价</th>
-                  <th>涨跌幅</th>
-                  <th>成交额(万)</th>
+                  <th>涨跌�?/th>
+                  <th>成交�?�?</th>
                 </tr>
               </thead>
               <tbody id="hotStocksTable">
-                <!-- 动态填充 -->
+                <!-- 动态填�?-->
               </tbody>
             </table>
           </div>
@@ -239,29 +239,29 @@
       <div class="section-container">
         <div class="section-header">
           <h2 class="section-title reveal-text">智能分析</h2>
-          <p class="section-subtitle">专业的金融数据分析平台</p>
+          <p class="section-subtitle">专业的金融数据分析平�?/p>
         </div>
         
         <div class="analysis-layout">
           <!-- 搜索区域 -->
           <div class="search-panel card-glow">
-            <h3>智能检索</h3>
+            <h3>智能检�?/h3>
             <div class="search-bar">
               <input 
                 type="text" 
                 id="query" 
-                placeholder="例如：查找2024年大宗交易数据，分析铜相关交易" 
+                placeholder="例如：查�?024年大宗交易数据，分析铜相关交�? 
                 class="search-input"
               />
               <button class="btn btn-primary" id="search-btn">
                 <span>🚀</span>
-                <span>开始检索</span>
+                <span>开始检�?/span>
               </button>
             </div>
             
             <div class="search-options">
               <label class="option-item">
-                <span>检索数量</span>
+                <span>检索数�?/span>
                 <input type="number" id="topk" value="10" min="1" max="50" />
               </label>
               <label class="option-item">
@@ -271,7 +271,7 @@
             </div>
             
             <div class="search-suggestions">
-              <span class="suggestion-chip" data-query="分析2024年大宗交易趋势">2024趋势分析</span>
+              <span class="suggestion-chip" data-query="分析2024年大宗交易趋�?>2024趋势分析</span>
               <span class="suggestion-chip" data-query="查找股票大宗交易数据">股票交易</span>
               <span class="suggestion-chip" data-query="基金大宗交易分析">基金分析</span>
             </div>
@@ -288,11 +288,11 @@
               <div class="message assistant">
                 <div class="message-avatar">🤖</div>
                 <div class="message-content">
-                  <p>您好！我是您的专业金融分析助手。我可以帮您：</p>
+                  <p>您好！我是您的专业金融分析助手。我可以帮您�?/p>
                   <ul>
                     <li>分析大宗交易市场数据</li>
-                    <li>解读K线图和趋势</li>
-                    <li>提供投资建议和风险评估</li>
+                    <li>解读K线图和趋�?/li>
+                    <li>提供投资建议和风险评�?/li>
                   </ul>
                 </div>
               </div>
@@ -306,8 +306,7 @@
                 class="chat-input"
               />
               <button class="btn btn-primary" onclick="handleAIChat()">
-                发送
-              </button>
+                发�?              </button>
             </div>
           </div>
         </div>
@@ -338,12 +337,12 @@
       <div class="section-container">
         <div class="section-header">
           <h2 class="section-title reveal-text">实时资讯</h2>
-          <p class="section-subtitle">最新的大宗交易市场动态</p>
-          <a href="/news" class="btn btn-outline">查看全部新闻 →</a>
+          <p class="section-subtitle">最新的大宗交易市场动�?/p>
+          <a href="/news" class="btn btn-outline">查看全部新闻 �?/a>
         </div>
         
         <div class="news-grid" id="newsGrid">
-          <!-- 动态加载新闻 -->
+          <!-- 动态加载新�?-->
         </div>
         
         <!-- 市场热点 -->
@@ -365,7 +364,7 @@
   <!-- 加载动画 -->
   <div class="loading-overlay" id="loadingOverlay" style="display: none;">
     <div class="loading-spinner"></div>
-    <div class="loading-text">AI正在分析中...</div>
+    <div class="loading-text">AI正在分析�?..</div>
   </div>
 
   <!-- 页脚 -->
@@ -373,7 +372,7 @@
     <div class="footer-content">
       <div class="footer-brand">
         <h3>Block Trade DT</h3>
-        <p>专业的大宗交易数据平台</p>
+        <p>专业的大宗交易数据平�?/p>
       </div>
       <div class="footer-links">
         <a href="https://www.douyin.com/user/MS4wLjABAAAAkBUw0RHPp3VqepZHs6YB8nzjlQygC3Lr4ZuRLkgvabE" target="_blank">抖音</a>
@@ -387,7 +386,7 @@
   <div class="auth-modal" id="authModal" style="display: none;">
     <div class="modal-overlay" onclick="closeAuthModal()"></div>
     <div class="modal-container">
-      <button class="modal-close" onclick="closeAuthModal()">✕</button>
+      <button class="modal-close" onclick="closeAuthModal()">�?/button>
       
       <!-- 登录表单 -->
       <div class="auth-form" id="loginForm">
@@ -396,13 +395,13 @@
         
         <form onsubmit="handleLogin(event)">
           <div class="form-group">
-            <label for="loginUsername">用户名</label>
+            <label for="loginUsername">用户�?/label>
             <input type="text" id="loginUsername" placeholder="请输入用户名" required />
           </div>
           
           <div class="form-group">
             <label for="loginPassword">密码</label>
-            <input type="password" id="loginPassword" placeholder="请输入密码" required />
+            <input type="password" id="loginPassword" placeholder="请输入密�? required />
           </div>
           
           <button type="submit" class="btn btn-primary btn-block">登录</button>
@@ -416,11 +415,11 @@
       <!-- 注册表单 -->
       <div class="auth-form" id="registerForm" style="display: none;">
         <h2 class="modal-title">创建账户</h2>
-        <p class="modal-subtitle">加入我们，开启智能交易之旅</p>
+        <p class="modal-subtitle">加入我们，开启智能交易之�?/p>
         
         <form onsubmit="handleRegister(event)">
           <div class="form-group">
-            <label for="registerUsername">用户名</label>
+            <label for="registerUsername">用户�?/label>
             <input type="text" id="registerUsername" placeholder="请输入用户名" required minlength="3" />
           </div>
           
@@ -431,24 +430,24 @@
           
           <div class="form-group">
             <label for="registerFullName">姓名</label>
-            <input type="text" id="registerFullName" placeholder="请输入您的姓名" required />
+            <input type="text" id="registerFullName" placeholder="请输入您的姓�? required />
           </div>
           
           <div class="form-group">
             <label for="registerPassword">密码</label>
-            <input type="password" id="registerPassword" placeholder="请输入密码" required minlength="6" />
+            <input type="password" id="registerPassword" placeholder="请输入密�? required minlength="6" />
           </div>
           
           <div class="form-group">
             <label for="registerConfirmPassword">确认密码</label>
-            <input type="password" id="registerConfirmPassword" placeholder="请再次输入密码" required minlength="6" />
+            <input type="password" id="registerConfirmPassword" placeholder="请再次输入密�? required minlength="6" />
           </div>
           
           <button type="submit" class="btn btn-primary btn-block">注册</button>
         </form>
         
         <div class="form-footer">
-          <p>已有账户？ <a href="#" onclick="switchToLogin(); return false;">立即登录</a></p>
+          <p>已有账户�?<a href="#" onclick="switchToLogin(); return false;">立即登录</a></p>
         </div>
       </div>
     </div>
@@ -596,14 +595,12 @@
     let authToken = localStorage.getItem('authToken');
     let currentUser = null;
     
-    // 页面加载时检查登录状态
-    window.addEventListener('DOMContentLoaded', () => {
+    // 页面加载时检查登录状�?    window.addEventListener('DOMContentLoaded', () => {
       if (authToken) {
         fetchUserProfile();
       }
       
-      // 给用户头像添加点击事件
-      const userProfile = document.getElementById('userProfile');
+      // 给用户头像添加点击事�?      const userProfile = document.getElementById('userProfile');
       if (userProfile) {
         userProfile.addEventListener('click', () => {
           if (!authToken) {
@@ -628,14 +625,12 @@
       document.getElementById('authModal').style.display = 'none';
     }
     
-    // 切换到登录表单
-    function switchToLogin() {
+    // 切换到登录表�?    function switchToLogin() {
       document.getElementById('loginForm').style.display = 'block';
       document.getElementById('registerForm').style.display = 'none';
     }
     
-    // 切换到注册表单
-    function switchToRegister() {
+    // 切换到注册表�?    function switchToRegister() {
       document.getElementById('loginForm').style.display = 'none';
       document.getElementById('registerForm').style.display = 'block';
     }
@@ -662,9 +657,9 @@
           currentUser = data.user;
           updateUserProfile();
           closeAuthModal();
-          showNotification('登录成功！', 'success');
+          showNotification('登录成功�?, 'success');
         } else {
-          showNotification(data.detail || '登录失败，请检查用户名和密码', 'error');
+          showNotification(data.detail || '登录失败，请检查用户名和密�?, 'error');
         }
       } catch (error) {
         console.error('登录错误:', error);
@@ -683,7 +678,7 @@
       const confirmPassword = document.getElementById('registerConfirmPassword').value;
       
       if (password !== confirmPassword) {
-        showNotification('两次输入的密码不一致', 'error');
+        showNotification('两次输入的密码不一�?, 'error');
         return;
       }
       
@@ -727,8 +722,7 @@
           currentUser = await response.json();
           updateUserProfile();
         } else {
-          // Token无效，清除登录状态
-          localStorage.removeItem('authToken');
+          // Token无效，清除登录状�?          localStorage.removeItem('authToken');
           authToken = null;
         }
       } catch (error) {
@@ -775,4 +769,6 @@
   <script src="/static/scripts_v2.js"></script>
 </body>
 </html>
+
+
 
