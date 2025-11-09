@@ -1,8 +1,10 @@
 {
+  "type": "python",
   "build_command": "",
   "start_command": "python -m uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000}",
-  "install_command": "pip install -r requirements.txt",
-  "output_dir": "."
+  "install_command": "pip install --no-cache-dir -r requirements.txt",
+  "output_dir": ".",
+  "python_version": "3.11"
 }
 
 
