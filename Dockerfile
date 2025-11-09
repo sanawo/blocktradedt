@@ -26,10 +26,11 @@ ENV PORT=8000
 # 暴露端口（Zeabur 会动态设置 PORT 环境变量）
 EXPOSE 8000
 
-# 健康检查（使用环境变量 PORT）
+# 健康检查（使用固定端口，Zeabur 会在容器内使用相同端口）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+  CMD curl -f http://localhost:8000/health || exit 1
 
 # 启动命令 - 使用环境变量 PORT（Zeabur 会自动设置）
-CMD sh -c "python -m uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000}"
+# 添加 --log-level info 以便查看详细日志
+CMD sh -c "python -m uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info --access-log"
 

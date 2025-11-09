@@ -21,14 +21,30 @@ from app.config import Config
 import jwt
 from datetime import datetime, timedelta
 from typing import Optional
+import logging
+
+# 配置日志（在应用创建之前）
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # 数据库配置 - 使用内存数据库适配Vercel
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./block_trade_dt.db")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# 创建数据库表
-Base.metadata.create_all(bind=engine)
+try:
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    
+    # 创建数据库表（带错误处理）
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("✅ 数据库表创建成功")
+    except Exception as e:
+        logger.error(f"❌ 数据库表创建失败: {e}")
+        # 继续运行，某些表可能已存在
+except Exception as e:
+    logger.error(f"❌ 数据库初始化失败: {e}")
+    # 创建备用引擎
+    engine = create_engine("sqlite:///./block_trade_dt.db", connect_args={"check_same_thread": False})
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # 初始化智谱AI（延迟初始化以避免启动时错误）
 zhipu_ai = None
@@ -39,10 +55,30 @@ def get_zhipu_ai():
 
 app = FastAPI(title="Block Trade DT", description="大宗交易数据检索平台")
 
+# 添加启动事件处理
+@app.on_event("startup")
+async def startup_event():
+    """应用启动时的初始化"""
+    try:
+        logger.info("🚀 Block Trade DT 应用正在启动...")
+        logger.info(f"📋 工作目录: {os.getcwd()}")
+        logger.info(f"🔌 数据库URL: {DATABASE_URL}")
+        logger.info(f"🌐 端口: {os.getenv('PORT', '8000')}")
+        
+        # 检查关键目录
+        for dir_name in ["static", "templates", "data", "artifacts"]:
+            if os.path.exists(dir_name):
+                logger.info(f"✅ 目录存在: {dir_name}")
+            else:
+                logger.warning(f"⚠️  目录不存在: {dir_name}")
+        
+        logger.info("✅ 应用启动完成")
+    except Exception as e:
+        logger.error(f"❌ 启动事件处理失败: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+
 # 静态文件和模板
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 try:
     # 检查目录是否存在
@@ -453,7 +489,7 @@ AI状态：{ai_status}"""
                         # 如果AI返回错误信息，将其添加到响应中
                         if ai_response and "❌" in ai_response:
                             response = f"{response}\n\n{ai_response}"
-                except Exception as e:
+    except Exception as e:
                     error_msg = str(e)
                     logger.error(f"AI客户端调用失败: {error_msg}")
                     import traceback
@@ -533,12 +569,12 @@ async def analyze_market_with_ai():
         import random
         
         # 生成市场统计数据（避免循环依赖）
-        stats = {
-            "total_volume": round(random.uniform(50, 100), 2),
-            "total_transactions": random.randint(100, 500),
-            "avg_price": round(random.uniform(-2, 2), 2),
-            "active_sellers": random.randint(50, 150)
-        }
+    stats = {
+        "total_volume": round(random.uniform(50, 100), 2),
+        "total_transactions": random.randint(100, 500),
+        "avg_price": round(random.uniform(-2, 2), 2),
+        "active_sellers": random.randint(50, 150)
+    }
     
         # 使用本地AI生成分析
         analysis_query = f"请分析以下市场数据：{stats}"
@@ -921,7 +957,7 @@ async def get_trends_data():
             "active_stocks_change": round(random.uniform(-5, 8), 2),
         }
 
-        categories = [
+    categories = [
             {"name": "热门钢材", "count": round(random.uniform(1200, 2600), 2), "change": round(random.uniform(-3, 6), 2)},
             {"name": "能源化工", "count": round(random.uniform(900, 2000), 2), "change": round(random.uniform(-3, 6), 2)},
             {"name": "有色金属", "count": round(random.uniform(700, 1800), 2), "change": round(random.uniform(-3, 6), 2)},
@@ -929,7 +965,7 @@ async def get_trends_data():
             {"name": "建材", "count": round(random.uniform(400, 1200), 2), "change": round(random.uniform(-3, 6), 2)},
         ]
 
-        regions = [
+    regions = [
             {"name": "华东营业部", "count": random.randint(40, 90), "percentage": round(random.uniform(25, 35), 1), "change": round(random.uniform(-2, 4), 2)},
             {"name": "华南营业部", "count": random.randint(30, 70), "percentage": round(random.uniform(18, 28), 1), "change": round(random.uniform(-2, 4), 2)},
             {"name": "华北营业部", "count": random.randint(30, 60), "percentage": round(random.uniform(15, 25), 1), "change": round(random.uniform(-2, 4), 2)},
@@ -950,14 +986,14 @@ async def get_trends_data():
             }
         }
     
-        return {
-            "stats": stats,
+    return {
+        "stats": stats,
             "charts": fallback_charts,
-            "time_labels": time_labels,
-            "transaction_volumes": transaction_volumes,
-            "price_trends": price_trends,
-            "categories": categories,
-            "regions": regions,
+        "time_labels": time_labels,
+        "transaction_volumes": transaction_volumes,
+        "price_trends": price_trends,
+        "categories": categories,
+        "regions": regions,
             "last_update": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "data_source": "模拟数据"
         }
