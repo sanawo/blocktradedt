@@ -28,7 +28,7 @@ EXPOSE 8000
 
 # 健康检查（使用环境变量 PORT）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD sh -c 'curl -f http://localhost:${PORT:-8000}/health || exit 1'
+  CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
 # 启动命令 - 使用环境变量 PORT（Zeabur 会自动设置）
 CMD sh -c "python -m uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000}"

@@ -1,0 +1,55 @@
+# Zeabur ignore file
+# 忽略不需要部署的文件
+
+# Git 相关
+.git/
+.gitignore
+.gitattributes
+
+# 文档文件
+*.md
+!README.md
+
+# 开发文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# 环境变量文件（Zeabur 会使用自己的环境变量）
+.env
+.env.local
+.env.*.local
+
+# 日志文件
+*.log
+logs/
+
+# 测试文件
+tests/
+test_*.py
+*_test.py
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+
+# 部署相关文档（已推送到 GitHub，不需要在容器中）
+DEPLOYMENT_*.md
+FIX_SUMMARY.md
+FEATURE_UPDATE_SUMMARY.md
+UPDATE_NOTES.md
+ZEABUR_REBUILD_GUIDE.md
+
