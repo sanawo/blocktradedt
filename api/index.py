@@ -3,11 +3,12 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import sessionmaker
 import sys
 import os
+import traceback
 
 # 添加项目根目录到Python路径
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -60,19 +61,43 @@ app = FastAPI(title="Block Trade DT", description="大宗交易数据检索平�
 async def startup_event():
     """应用启动时的初始化"""
     try:
+        logger.info("=" * 50)
         logger.info("🚀 Block Trade DT 应用正在启动...")
+        logger.info("=" * 50)
         logger.info(f"📋 工作目录: {os.getcwd()}")
         logger.info(f"🔌 数据库URL: {DATABASE_URL}")
         logger.info(f"🌐 端口: {os.getenv('PORT', '8000')}")
+        logger.info(f"🐍 Python版本: {sys.version}")
         
         # 检查关键目录
-        for dir_name in ["static", "templates", "data", "artifacts"]:
+        logger.info("📁 检查目录结构:")
+        for dir_name in ["static", "templates", "data", "artifacts", "app", "api"]:
             if os.path.exists(dir_name):
-                logger.info(f"✅ 目录存在: {dir_name}")
+                logger.info(f"  ✅ {dir_name}/")
             else:
-                logger.warning(f"⚠️  目录不存在: {dir_name}")
+                logger.warning(f"  ⚠️  {dir_name}/ 不存在")
         
-        logger.info("✅ 应用启动完成")
+        # 检查关键文件
+        logger.info("📄 检查关键文件:")
+        key_files = ["api/index.py", "templates/index_v2.html"]
+        for file_name in key_files:
+            if os.path.exists(file_name):
+                logger.info(f"  ✅ {file_name}")
+            else:
+                logger.warning(f"  ⚠️  {file_name} 不存在")
+        
+        # 测试数据库连接
+        try:
+            db = SessionLocal()
+            db.execute(text("SELECT 1"))
+            db.close()
+            logger.info("  ✅ 数据库连接正常")
+        except Exception as e:
+            logger.warning(f"  ⚠️  数据库连接测试失败: {e}")
+        
+        logger.info("=" * 50)
+        logger.info("✅ 应用启动完成，准备接收请求")
+        logger.info("=" * 50)
     except Exception as e:
         logger.error(f"❌ 启动事件处理失败: {e}")
         import traceback
@@ -165,16 +190,63 @@ def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials
 # 健康检查端点
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "Block Trade DT"}
+    """健康检查端点 - 用于 Zeabur 和 Docker 健康检查"""
+    try:
+        # 检查数据库连接
+        db = SessionLocal()
+        try:
+            db.execute(text("SELECT 1"))
+            db_status = "connected"
+        except Exception as e:
+            db_status = f"error: {str(e)}"
+        finally:
+            db.close()
+        
+        return {
+            "status": "healthy",
+            "service": "Block Trade DT",
+            "database": db_status,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        # 即使数据库检查失败，也返回健康状态（应用可以运行）
+        return {
+            "status": "healthy",
+            "service": "Block Trade DT",
+            "database": "not_checked",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 # 主页路由
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    if templates is None:
-        return HTMLResponse("<h1>Block Trade DT API</h1><p>模板系统未加载，请使用 API 端点</p>", media_type="text/html; charset=utf-8")
-    response = templates.TemplateResponse("index_v2.html", {"request": request})
-    response.charset = "utf-8"
-    return response
+    """主页路由 - 返回首页 HTML"""
+    try:
+        if templates is None:
+            logger.warning("模板系统未加载，返回简单HTML")
+            return HTMLResponse(
+                "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Block Trade DT</title></head>"
+                "<body><h1>Block Trade DT</h1><p>应用正在运行，但模板系统未加载。</p>"
+                "<p><a href='/health'>健康检查</a></p></body></html>",
+                media_type="text/html; charset=utf-8"
+            )
+        
+        logger.info("返回首页模板")
+        response = templates.TemplateResponse("index_v2.html", {"request": request})
+        response.charset = "utf-8"
+        return response
+    except Exception as e:
+        logger.error(f"主页路由错误: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return HTMLResponse(
+            f"<!DOCTYPE html><html><head><meta charset='utf-8'><title>Error</title></head>"
+            f"<body><h1>应用错误</h1><p>错误信息: {str(e)}</p>"
+            f"<p><a href='/health'>健康检查</a></p></body></html>",
+            media_type="text/html; charset=utf-8",
+            status_code=500
+        )
 
 # 趋势页面（深色模式）
 @app.get("/trends", response_class=HTMLResponse)
