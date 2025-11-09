@@ -31,7 +31,7 @@ EXPOSE 8000
 
 # 健康检查（使用固定端口，Zeabur 会在容器内使用相同端口）
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+  CMD sh -c "curl -f http://localhost:${PORT:-8000}/health || exit 1"
 
 # 启动命令 - 使用环境变量 PORT（Zeabur 会自动设置）
 # 添加 --log-level info 以便查看详细日志
