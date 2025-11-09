@@ -840,12 +840,31 @@ async def get_trends_data():
             ranking.sort(key=lambda item: item["amount"], reverse=True)
             return ranking[:5]
 
-        # 获取今日成交明细（使用缓存）
-        trade_result = cache.get_or_set(
-            'dzjy_data',
-            lambda: get_ths_dzjy_data(page=1),
-        )
-        trades = trade_result.get("data", []) if trade_result and trade_result.get("success") else []
+        # 优先尝试从东方财富网获取数据
+        trades = []
+        trade_result = None
+        try:
+            from app.eastmoney_scraper import get_eastmoney_dzjy
+            logger.info("尝试从东方财富网获取趋势数据")
+            eastmoney_result = get_eastmoney_dzjy(page=1, page_size=100)
+            if eastmoney_result.get('success') and eastmoney_result.get('data'):
+                trades = eastmoney_result.get('data', [])
+                trade_result = {
+                    "success": True,
+                    "data": trades,
+                    "source": "东方财富网"
+                }
+                logger.info(f"从东方财富网获取到 {len(trades)} 条交易数据")
+        except Exception as e:
+            logger.warning(f"从东方财富网获取数据失败，使用同花顺: {e}")
+        
+        # 如果东方财富网没有数据，使用同花顺数据
+        if not trades:
+            trade_result = cache.get_or_set(
+                'dzjy_data',
+                lambda: get_ths_dzjy_data(page=1),
+            )
+            trades = trade_result.get("data", []) if trade_result and trade_result.get("success") else []
         
         # 获取热门股票（使用缓存）
         popular_stocks = cache.get_or_set(
@@ -968,7 +987,11 @@ async def get_trends_data():
             "active_stocks_change": percent_change(active_stocks, prev_deals),
         }
 
-        data_source = trade_result.get("source", "同花顺") if trade_result.get("success") else "同花顺"
+        # 确定数据来源
+        if trade_result and trade_result.get("success"):
+            data_source = trade_result.get("source", "同花顺")
+        else:
+            data_source = "同花顺"
 
         response_payload = {
             "stats": stats,
@@ -1073,13 +1096,32 @@ async def get_trends_data():
 @app.get("/api/ths/dzjy")
 async def get_ths_dzjy_data(page: int = 1, date: Optional[str] = None):
     """
-    获取同花顺大宗交易详细数据（使用缓存）
+    获取大宗交易详细数据（优先使用东方财富网，失败则使用同花顺）
     """
     try:
-        from app.ths_scraper import get_ths_dzjy_data as fetch_ths_data
         from app.cache import cache
+        from app.eastmoney_scraper import get_eastmoney_dzjy
+        from app.ths_scraper import get_ths_dzjy_data as fetch_ths_data
         
-        # 只有第一页且是今日数据时才使用缓存
+        # 优先尝试使用东方财富网数据
+        try:
+            logger.info(f"尝试从东方财富网获取大宗交易数据，页码: {page}")
+            eastmoney_result = get_eastmoney_dzjy(page=page, page_size=50)
+            
+            if eastmoney_result.get('success') and eastmoney_result.get('data'):
+                logger.info(f"成功从东方财富网获取 {len(eastmoney_result.get('data', []))} 条数据")
+                return {
+                    "success": True,
+                    "data": eastmoney_result.get('data', []),
+                    "total": eastmoney_result.get('total', 0),
+                    "source": "东方财富网",
+                    "timestamp": datetime.now().isoformat()
+                }
+        except Exception as e:
+            logger.warning(f"从东方财富网获取数据失败，尝试同花顺: {e}")
+        
+        # 如果东方财富网失败，使用同花顺数据
+        logger.info(f"使用同花顺数据源，页码: {page}")
         cache_key = f'dzjy_data_{date or "today"}_{page}'
         if page == 1 and (not date or date == datetime.now().strftime('%Y-%m-%d')):
             result = cache.get_or_set(cache_key, lambda: fetch_ths_data(page=page, date=date))
@@ -1092,7 +1134,7 @@ async def get_ths_dzjy_data(page: int = 1, date: Optional[str] = None):
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
-        logger.error(f"获取同花顺大宗交易数据失败: {e}")
+        logger.error(f"获取大宗交易数据失败: {e}")
         return {
             "success": False,
             "error": str(e),
