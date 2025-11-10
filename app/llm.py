@@ -1,60 +1,22 @@
 from __future__ import annotations
 from typing import List, Dict, Any, Optional
 import os
-import logging
-
-# 设置日志
-logger = logging.getLogger(__name__)
 
 class LLM:
     """LLM类，支持智谱AI和本地摘要功能"""
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "glm-4.5-flash"):
+    def __init__(self, api_key: Optional[str] = None):
         """
         初始化LLM
         
         Args:
-            api_key: 智谱AI API密钥，如果不提供则使用环境变量
-            model: 使用的模型，默认为glm-4.5-flash
+            api_key: 智谱AI API密钥，如果不提供则使用环境变量或本地模式
         """
-        # 获取API密钥
         self.api_key = api_key or os.getenv('ZHIPU_API_KEY')
-        self.model = model
         self.client = None
-        self.use_old_sdk = False
-        self.init_error = None
         
-        # 记录初始化信息
-        if self.api_key:
-            logger.info(f"检测到API密钥，长度: {len(self.api_key)}")
-            # 尝试初始化智谱AI客户端
-            try:
-                # 使用官方zhipuai SDK
-                import zhipuai
-                logger.info("正在初始化智谱AI客户端...")
-                self.client = zhipuai.ZhipuAI(api_key=self.api_key)
-                logger.info("✅ 智谱AI客户端初始化成功")
-                self.use_old_sdk = False
-            except ImportError:
-                # SDK未安装
-                error_msg = "zhipuai SDK未安装，AI功能将不可用。请运行: pip install zhipuai"
-                logger.error(error_msg)
-                self.init_error = error_msg
-                self.client = None
-                self.use_old_sdk = False
-            except Exception as e:
-                error_msg = f"初始化AI客户端失败: {str(e)}"
-                logger.error(error_msg)
-                import traceback
-                logger.error(traceback.format_exc())
-                self.init_error = error_msg
-                self.client = None
-                self.use_old_sdk = False
-        else:
-            logger.warning("未检测到ZHIPU_API_KEY环境变量，AI功能将使用本地回复模式")
-            self.init_error = "未配置API密钥"
+        # Disabled to fix deployment issues
         self.client = None
-            self.use_old_sdk = False
     
     def generate_summary(self, query: str, results: List[Dict[str, Any]]) -> str:
         """生成搜索结果摘要"""
@@ -97,18 +59,9 @@ class LLM:
         # 构建上下文信息
         context = self._build_context(query, results)
         
-        try:
-            # 选择模型（根据文档使用glm-4-flash或glm-4.6）
-            if "4.5" in self.model.lower() or "4.6" in self.model.lower():
-                model_name = "glm-4-flash"
-            elif "glm-4" in self.model.lower():
-                model_name = "glm-4-flash"
-            else:
-                model_name = self.model
-            
-            # 使用官方zhipuai SDK（根据文档标准格式）
+        # 调用智谱AI
         response = self.client.chat.completions.create(
-                model=model_name,
+            model="glm-4-flash",  # 使用快速模型
             messages=[
                 {
                     "role": "system",
@@ -120,25 +73,10 @@ class LLM:
                 }
             ],
             temperature=0.7,
-                max_tokens=500,
-                stream=False  # 明确指定非流式
-            )
-            
-            # 处理响应（根据文档：response.choices[0].message.content）
-            if hasattr(response, 'choices') and len(response.choices) > 0:
-                choice = response.choices[0]
-                if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
-                    content = choice.message.content
-                    if content:
-                        return content
-            logger.warning(f"摘要生成响应格式异常: {type(response)}")
-            return "摘要生成失败，请稍后重试。"
-                
-        except Exception as e:
-            print(f"AI摘要生成失败: {e}")
-            import traceback
-            print(traceback.format_exc())
-            raise
+            max_tokens=500
+        )
+        
+        return response.choices[0].message.content
     
     def _build_context(self, query: str, results: List[Dict[str, Any]]) -> str:
         """构建上下文信息"""
@@ -166,43 +104,24 @@ class LLM:
         
         return "\n".join(context_parts)
     
-    def chat(self, message: str, context: Optional[str] = None, system_prompt: Optional[str] = None, 
-             stream: bool = False) -> str:
+    def chat(self, message: str, context: Optional[str] = None, system_prompt: Optional[str] = None) -> str:
         """
-        AI助手对话功能 - 使用智谱AI SDK
+        AI助手对话功能
         
         Args:
             message: 用户消息
             context: 可选的上下文信息
-            system_prompt: 可选的系统提示词
-            stream: 是否使用流式输出（默认False）
+            system_prompt: 可选的系统提示词，如果提供则使用此提示词替代默认提示词
             
         Returns:
             AI回复
         """
         if not self.client:
-            error_info = self.init_error or "未知错误"
-            return f"""❌ AI功能当前不可用
-
-原因：{error_info}
-
-解决方法：
-1. 检查环境变量ZHIPU_API_KEY是否正确配置
-2. 确认已安装zhipuai SDK：pip install zhipuai
-3. 在Zeabur平台的环境变量中添加：ZHIPU_API_KEY=your_api_key
-4. 重新部署应用以加载环境变量
-5. 获取API密钥：访问 https://open.bigmodel.cn/
-
-当前状态：AI功能已启用本地回复模式，可以提供基础帮助。
-
-调试信息：
-- API密钥存在：{'是' if self.api_key else '否'}
-- 密钥长度：{len(self.api_key) if self.api_key else 0}
-- 初始化错误：{error_info}"""
+            return "AI助手暂时不可用，请检查API密钥配置。"
         
         try:
             # 使用自定义system_prompt或默认提示词
-            default_system_prompt = "你是一个专业的大宗交易数据分析助手。你可以帮助用户理解市场趋势、分析交易数据、回答相关问题。请用专业、友好的语气回答，始终使用中文。"
+            default_system_prompt = "你是一个专业的大宗交易数据分析助手。你可以帮助用户理解市场趋势、分析交易数据、回答相关问题。请用专业、友好的语气回答。"
             messages = [
                 {
                     "role": "system",
@@ -222,118 +141,17 @@ class LLM:
                 "content": message
             })
             
-            # 使用官方zhipuai SDK
-            # 模型映射：根据文档，支持glm-4.6, glm-4-flash等
-            # 如果指定glm-4.5-flash，使用glm-4-flash（兼容模型）
-            if "4.5" in self.model.lower() or "4.6" in self.model.lower():
-                model_name = "glm-4-flash"  # 使用兼容的免费模型
-            elif "glm-4" in self.model.lower():
-                model_name = "glm-4-flash"  # 默认使用flash版本
-            else:
-                model_name = self.model
-            
-            try:
-                # 尝试使用流式输出（如果支持）
-                if stream:
-                    response = self.client.chat.completions.create(
-                        model=model_name,
-                        messages=messages,
-                        temperature=0.7,
-                        max_tokens=4096,
-                        stream=True
-                    )
-                    content = ""
-                    for chunk in response:
-                        if hasattr(chunk, 'choices') and len(chunk.choices) > 0:
-                            delta = chunk.choices[0].delta
-                            if hasattr(delta, 'content') and delta.content:
-                                content += delta.content
-                    return content if content else "抱歉，未收到有效回复。"
-                else:
-                    # 非流式输出（根据文档标准格式）
-                    response = self.client.chat.completions.create(
-                        model=model_name,
-                        messages=messages,
-                        temperature=0.7,
-                        max_tokens=4096,
-                        stream=False  # 明确指定非流式
-                    )
-                    # 检查响应格式（根据文档：response.choices[0].message.content）
-                    if hasattr(response, 'choices') and len(response.choices) > 0:
-                        choice = response.choices[0]
-                        if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
-                            content = choice.message.content
-                            if content:
-                                return content
-                    # 如果响应格式不同，记录日志
-                    logger.warning(f"响应格式异常: {type(response)}")
-                    return "抱歉，未收到有效回复。请检查API响应格式。"
-            except AttributeError as e:
-                # 如果API接口不同，尝试兼容调用
-                logger.warning(f"API接口不兼容，尝试兼容调用: {e}")
-                try:
             response = self.client.chat.completions.create(
-                        model=model_name,
+                model="glm-4-flash",
                 messages=messages,
                 temperature=0.7,
-                        max_tokens=4096
+                max_tokens=1000
             )
-                    return response.choices[0].message.content
-                except Exception as e2:
-                    logger.error(f"兼容调用也失败: {e2}")
-                    raise e2
             
+            return response.choices[0].message.content
         except Exception as e:
-            error_msg = str(e)
-            logger.error(f"AI chat failed: {error_msg}")
-            import traceback
-            logger.error(traceback.format_exc())
-            
-            # 根据错误类型提供更详细的提示
-            if "401" in error_msg or "unauthorized" in error_msg.lower() or "invalid" in error_msg.lower():
-                return f"""❌ AI功能调用失败
-
-错误类型：API密钥验证失败
-
-可能原因：
-1. API密钥无效或已过期
-2. API密钥格式不正确
-3. 账户余额不足
-
-解决方法：
-1. 检查Zeabur环境变量中的ZHIPU_API_KEY是否正确
-2. 访问 https://open.bigmodel.cn/ 验证API密钥
-3. 确认账户有足够余额
-4. 重新部署应用
-
-错误详情：{error_msg}"""
-            elif "rate limit" in error_msg.lower() or "429" in error_msg:
-                return f"""⚠️ AI功能暂时受限
-
-原因：API调用频率超限
-
-解决方法：
-1. 稍后再试
-2. 检查API配额限制
-3. 升级API套餐
-
-错误详情：{error_msg}"""
-            else:
-                return f"""❌ AI功能调用失败
-
-错误：{error_msg}
-
-可能原因：
-1. 网络连接问题
-2. API服务暂时不可用
-3. 请求格式错误
-
-解决方法：
-1. 检查网络连接
-2. 稍后重试
-3. 查看Zeabur日志获取详细信息
-
-当前状态：已切换到本地回复模式"""
+            print(f"AI chat failed: {e}")
+            return f"抱歉，AI助手遇到了问题：{str(e)}"
 
 
 

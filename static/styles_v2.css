@@ -166,16 +166,8 @@ body.cursor-hover .cursor-outline {
 }
 
 .logo-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  display: inline-block;
-  object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-  transition: transform var(--transition-base);
-}
-
-.logo:hover .logo-icon {
-  transform: scale(1.05);
+  font-size: 1.5rem;
+  animation: pulse 2s ease-in-out infinite;
 }
 
 @keyframes pulse {

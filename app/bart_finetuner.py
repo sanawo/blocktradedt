@@ -136,7 +136,7 @@ class BARTFinetuner:
     def train(self, training_data: List[Dict[str, str]], output_dir: str = "models/bart_pulp"):
         """训练BART模型"""
         logger.info("开始训练BART模型...")
-        logger.info(f"训练数据量: {len(training_data .)}")
+        logger.info(f"训练数据量: {len(training_data)}")
         
         # 这里应该是实际的训练代码
         # 由于环境和依赖的限制，这里提供训练框架
@@ -171,7 +171,7 @@ class BARTFinetuner:
         
         return training_config
     
-    def展示训练代码示例(self):
+    def show_training_code_example(self):
         """展示完整的训练代码示例"""
         training_code = """
 # 完整训练代码示例

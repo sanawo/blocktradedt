@@ -8,17 +8,6 @@ python-dotenv==1.1.1
 beautifulsoup4==4.12.2
 lxml==4.9.3
 sqlalchemy==2.0.23
-PyJWT>=2.8.0,<2.9.0
+PyJWT==2.8.0
 python-multipart==0.0.9
 bcrypt==4.1.2
-numpy==1.24.3
-zhipuai>=2.1.5  # 智谱AI官方SDK（稳定版本）
-# zai-sdk>=0.0.4  # 智谱AI新版SDK（API有变化，暂时不使用）
-# fastembed==0.0.13  # Removed - version not available
-# sentence-transformers==2.2.2  # Removed for deployment compatibility
-# torch>=2.0.0  # Removed for deployment compatibility (large size)
-# transformers>=4.30.0  # Removed for deployment compatibility
-# datasets>=2.12.0  # Removed for deployment compatibility
-# scikit-learn>=1.3.0  # Removed for deployment compatibility
-# nltk>=3.8.0  # Removed for deployment compatibility
-# pyyaml>=6.0  # Removed for deployment compatibility
