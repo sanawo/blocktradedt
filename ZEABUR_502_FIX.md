@@ -52,8 +52,8 @@ git push origin master
 #### 检查以下配置：
 
 **端口设置**:
-- 确保端口设置为 `8000` 或使用环境变量 `PORT`
-- Zeabur会自动设置`PORT`环境变量
+- Zeabur会自动设置`PORT`环境变量（通常为 `8080`）
+- 应用会自动使用 `${PORT}` 环境变量，无需手动配置
 
 **环境变量**（可选）:
 ```
@@ -62,7 +62,7 @@ JWT_SECRET_KEY=your-secret-key-here
 ```
 
 **启动命令**:
-- 应该自动检测到: `python -m uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000}`
+- 应该自动检测到: `python -m uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8080}`
 - 如果不同，手动设置为上述命令
 
 ### 步骤3: 触发重新部署
@@ -104,7 +104,7 @@ JWT_SECRET_KEY=your-secret-key-here
 INFO:     Started server process [1]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)
 ```
 
 ### 步骤5: 验证部署
@@ -181,21 +181,21 @@ ImportError: cannot import name 'xxx'
 ### 3. 检查端口配置
 
 **在Zeabur服务设置中**:
-- **端口**: 应该设置为 `8000` 或使用 `PORT` 环境变量
+- **端口**: Zeabur会自动设置 `PORT` 环境变量（通常为 `8080`）
 - **协议**: `HTTP`
 
 **验证方法**:
 在部署日志中查找：
 ```
-Uvicorn running on http://0.0.0.0:8000
+Uvicorn running on http://0.0.0.0:8080
 ```
-如果端口不同，说明配置有问题。
+应用会自动使用 Zeabur 设置的端口。
 
 ### 4. 检查启动命令
 
 **正确的启动命令**:
 ```bash
-python -m uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info
+python -m uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8080} --log-level info
 ```
 
 **在Zeabur服务设置中验证**:
@@ -209,14 +209,14 @@ python -m uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000} --log-level 
 
 **本地测试**:
 ```bash
-# 设置端口
-export PORT=8000
+# 设置端口（模拟Zeabur环境）
+export PORT=8080
 
 # 启动应用
 python -m uvicorn api.index:app --host 0.0.0.0 --port $PORT
 
 # 测试健康检查
-curl http://localhost:8000/health
+curl http://localhost:8080/health
 ```
 
 如果本地也失败，说明代码有问题，需要先修复。
