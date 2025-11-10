@@ -31,7 +31,7 @@ except ImportError as e:
     raise
 
 try:
-    from app.models import Base, User, SearchHistory
+    from app.models import Base, User, SearchHistory, DzjyTrade
     logger.info("✅ Models 导入成功")
 except ImportError as e:
     logger.error(f"❌ Models 导入失败: {e}")
@@ -80,9 +80,9 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./block_trade_dt.db")
 try:
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    # 创建数据库表
+    # 创建数据库表（包括DzjyTrade表）
     Base.metadata.create_all(bind=engine)
-    logger.info("✅ 数据库初始化成功")
+    logger.info("✅ 数据库初始化成功，所有表已创建")
 except Exception as e:
     logger.error(f"❌ 数据库初始化失败: {e}")
     # 使用内存数据库作为后备
@@ -461,6 +461,205 @@ async def get_trends_data():
         "regions": regions,
         "last_update": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
+
+@app.get("/api/dzjy/latest")
+async def get_dzjy_latest(db: Session = Depends(get_db), limit: int = 10):
+    """
+    获取最新大宗交易数据
+    
+    示例响应:
+    {
+        "success": true,
+        "data": [
+            {
+                "trade_time": "2025-01-10T10:30:00",
+                "stock_code": "000001",
+                "stock_name": "平安银行",
+                "volume": 100.5,
+                "amount": 1500.0,
+                "price": 15.0,
+                "source_raw": "{...}"
+            }
+        ],
+        "count": 10
+    }
+    """
+    try:
+        from sqlalchemy import desc
+        
+        trades = db.query(DzjyTrade).order_by(desc(DzjyTrade.trade_time)).limit(limit).all()
+        
+        data = [{
+            "trade_time": trade.trade_time.isoformat() if trade.trade_time else None,
+            "stock_code": trade.stock_code,
+            "stock_name": trade.stock_name,
+            "volume": trade.volume,
+            "amount": trade.amount,
+            "price": trade.price,
+            "source_raw": trade.source_raw
+        } for trade in trades]
+        
+        return {
+            "success": True,
+            "data": data,
+            "count": len(data),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"获取最新大宗交易数据失败: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "data": [],
+            "count": 0
+        }
+
+@app.get("/api/dzjy/trends")
+async def get_dzjy_trends(db: Session = Depends(get_db), period: str = "24h"):
+    """
+    获取大宗交易趋势数据
+    
+    参数:
+    - period: 时间周期，可选值: 24h, 7d, 30d
+    
+    示例响应:
+    {
+        "success": true,
+        "period": "24h",
+        "data": [
+            {
+                "date": "2025-01-10",
+                "volume": 1000.5,
+                "amount": 15000.0,
+                "count": 50
+            }
+        ]
+    }
+    """
+    try:
+        from sqlalchemy import func, and_
+        
+        # 计算时间范围
+        now = datetime.now()
+        if period == "24h":
+            start_time = now - timedelta(hours=24)
+            group_format = "%Y-%m-%d %H:00"
+        elif period == "7d":
+            start_time = now - timedelta(days=7)
+            group_format = "%Y-%m-%d"
+        elif period == "30d":
+            start_time = now - timedelta(days=30)
+            group_format = "%Y-%m-%d"
+        else:
+            start_time = now - timedelta(hours=24)
+            group_format = "%Y-%m-%d %H:00"
+        
+        # 查询数据并分组统计
+        # 获取数据库dialect名称
+        dialect_name = db.bind.dialect.name if hasattr(db.bind, 'dialect') else 'sqlite'
+        if dialect_name == 'sqlite':
+            # SQLite使用strftime
+            date_expr = func.strftime(group_format, DzjyTrade.trade_time)
+        else:
+            # PostgreSQL使用to_char
+            date_expr = func.to_char(DzjyTrade.trade_time, group_format.replace('%', ''))
+        
+        results = db.query(
+            date_expr.label('date'),
+            func.sum(DzjyTrade.volume).label('volume'),
+            func.sum(DzjyTrade.amount).label('amount'),
+            func.count(DzjyTrade.id).label('count')
+        ).filter(
+            DzjyTrade.trade_time >= start_time
+        ).group_by('date').order_by('date').all()
+        
+        data = [{
+            "date": r.date,
+            "volume": float(r.volume or 0),
+            "amount": float(r.amount or 0),
+            "count": r.count or 0
+        } for r in results]
+        
+        return {
+            "success": True,
+            "period": period,
+            "data": data,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"获取趋势数据失败: {e}")
+        # 返回空数据而不是错误
+        return {
+            "success": True,
+            "period": period,
+            "data": [],
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/api/dzjy/list")
+async def get_dzjy_list(db: Session = Depends(get_db), page: int = 1, size: int = 20):
+    """
+    获取大宗交易列表（分页）
+    
+    参数:
+    - page: 页码，从1开始
+    - size: 每页数量，默认20
+    
+    示例响应:
+    {
+        "success": true,
+        "page": 1,
+        "size": 20,
+        "total": 100,
+        "data": [
+            {
+                "trade_time": "2025-01-10T10:30:00",
+                "stock_code": "000001",
+                "stock_name": "平安银行",
+                "volume": 100.5,
+                "amount": 1500.0,
+                "price": 15.0
+            }
+        ]
+    }
+    """
+    try:
+        from sqlalchemy import desc
+        
+        # 计算总数
+        total = db.query(DzjyTrade).count()
+        
+        # 分页查询
+        offset = (page - 1) * size
+        trades = db.query(DzjyTrade).order_by(desc(DzjyTrade.trade_time)).offset(offset).limit(size).all()
+        
+        data = [{
+            "trade_time": trade.trade_time.isoformat() if trade.trade_time else None,
+            "stock_code": trade.stock_code,
+            "stock_name": trade.stock_name,
+            "volume": trade.volume,
+            "amount": trade.amount,
+            "price": trade.price
+        } for trade in trades]
+        
+        return {
+            "success": True,
+            "page": page,
+            "size": size,
+            "total": total,
+            "data": data,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"获取大宗交易列表失败: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "page": page,
+            "size": size,
+            "total": 0,
+            "data": []
+        }
 
 @app.get("/api/news")
 async def api_news(page: int = 1, category: str = "all", limit: int = 20):

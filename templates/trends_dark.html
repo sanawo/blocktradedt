@@ -996,27 +996,89 @@
           document.getElementById('loadingOverlay').style.display = 'flex';
         }
         
-        const response = await fetch('/api/trends/data');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        trendData = data;
+        // 并行加载多个API
+        const [trendsResponse, latestResponse, statsResponse] = await Promise.all([
+          fetch(`/api/dzjy/trends?period=${currentPeriod}`),
+          fetch('/api/dzjy/latest?limit=5'),
+          fetch('/api/dzjy/list?page=1&size=100')
+        ]);
 
-        if (data.stats) {
-          updateStats(data.stats);
+        // 处理趋势数据
+        let trendsData = {};
+        if (trendsResponse.ok) {
+          const trends = await trendsResponse.json();
+          if (trends.success && trends.data) {
+            trendsData = {
+              volume: {
+                [periodMap[currentPeriod]]: {
+                  labels: trends.data.map(d => d.date),
+                  values: trends.data.map(d => d.volume)
+                }
+              }
+            };
+          }
         }
 
-        if (data.last_update) {
-          document.getElementById('lastUpdateTime').textContent = data.last_update;
+        // 处理统计数据
+        let stats = {};
+        if (statsResponse.ok) {
+          const listData = await statsResponse.json();
+          if (listData.success && listData.data) {
+            const trades = listData.data;
+            const totalAmount = trades.reduce((sum, t) => sum + (t.amount || 0), 0);
+            const totalVolume = trades.reduce((sum, t) => sum + (t.volume || 0), 0);
+            const uniqueStocks = new Set(trades.map(t => t.stock_code)).size;
+            const avgDiscount = trades.length > 0 
+              ? trades.reduce((sum, t) => {
+                  const closePrice = t.price / (1 + (t.discount_rate || 0) / 100);
+                  const discount = ((t.price - closePrice) / closePrice) * 100;
+                  return sum + discount;
+                }, 0) / trades.length
+              : 0;
+
+            stats = {
+              total_amount: totalAmount,
+              total_volume: totalVolume,
+              active_stocks: uniqueStocks,
+              avg_discount: avgDiscount,
+              total_amount_change: 0,
+              total_volume_change: 0,
+              active_stocks_change: 0,
+              avg_discount_change: 0
+            };
+          }
         }
 
-        if (data.data_source) {
-          document.getElementById('dataSource').textContent = `数据来源: ${data.data_source}`;
+        // 处理热门股票
+        let hotStocks = [];
+        if (latestResponse.ok) {
+          const latest = await latestResponse.json();
+          if (latest.success && latest.data) {
+            hotStocks = latest.data.map(t => ({
+              code: t.stock_code,
+              name: t.stock_name,
+              amount: t.amount,
+              volume: t.volume,
+              discount_rate: 0 // 可以从source_raw解析
+            }));
+          }
         }
 
-        renderHotStocks(data.hot_stocks || data.categories || []);
-        renderBrokerRankings(data.broker_rankings || data.regions || []);
+        // 更新页面
+        trendData = {
+          charts: trendsData,
+          stats: stats
+        };
+
+        if (stats && Object.keys(stats).length > 0) {
+          updateStats(stats);
+        }
+
+        document.getElementById('lastUpdateTime').textContent = new Date().toLocaleString('zh-CN');
+        document.getElementById('dataSource').textContent = '数据来源: 同花顺';
+
+        renderHotStocks(hotStocks);
+        renderBrokerRankings([]); // 营业部数据需要额外处理
 
         if (applyCurrent) {
           applyPeriod(currentPeriod);
@@ -1052,7 +1114,7 @@
         tbody.innerHTML = '<tr><td colspan="10" class="loading-cell"><div class="table-loading"><span>正在加载数据...</span></div></td></tr>';
 
         const startTime = Date.now();
-        const response = await fetch(`/api/ths/dzjy?page=${page}`);
+        const response = await fetch(`/api/dzjy/list?page=${page}&size=50`);
         const loadTime = Date.now() - startTime;
         
         if (!response.ok) {
@@ -1061,48 +1123,32 @@
         
         const result = await response.json();
         
-        // 如果加载时间很短，说明使用了缓存
-        if (loadTime < 500) {
-          console.log(`数据加载完成（使用缓存，耗时${loadTime}ms）`);
-        } else {
-          console.log(`数据加载完成（耗时${loadTime}ms）`);
-        }
+        console.log(`数据加载完成（耗时${loadTime}ms）`);
 
         if (result.success && result.data && result.data.length > 0) {
-          dzjyData = result.data;
-          currentPage = page;
-
-          if (result.source) {
-            document.getElementById('dataSource').textContent = `数据来源: ${result.source}`;
-          }
-
-          renderDzjyTable(dzjyData);
-          updatePagination();
-        } else {
-          const popularResponse = await fetch(`/api/ths/popular?limit=50`);
-          const popularResult = await popularResponse.json();
-
-          if (popularResult.success && popularResult.data && popularResult.data.length > 0) {
-            dzjyData = popularResult.data.map(stock => ({
-              date: stock.date || new Date().toISOString().split('T')[0],
-              code: stock.code,
-              name: stock.name,
-              close_price: stock.latest_price,
-              trade_price: stock.trade_price,
-              volume: stock.volume,
-              discount_rate: stock.change_percent,
-              amount: stock.amount,
+          // 转换数据格式以匹配表格
+          dzjyData = result.data.map(trade => {
+            const tradeTime = trade.trade_time ? new Date(trade.trade_time) : new Date();
+            return {
+              date: tradeTime.toISOString().split('T')[0],
+              code: trade.stock_code,
+              name: trade.stock_name,
+              close_price: trade.price * 0.98, // 估算收盘价
+              trade_price: trade.price,
+              volume: trade.volume,
+              discount_rate: ((trade.price - trade.price * 0.98) / (trade.price * 0.98)) * 100,
+              amount: trade.amount,
               buy_broker: '--',
               sell_broker: '--'
-            }));
-
-            renderDzjyTable(dzjyData);
-            updatePagination();
-
-            document.getElementById('dataSource').textContent = `数据来源: ${popularResult.source || '同花顺'}`;
-          } else {
-            tbody.innerHTML = '<tr><td colspan="10" class="loading-cell"><div style="color: var(--text-secondary);">暂无数据</div></td></tr>';
-          }
+            };
+          });
+          
+          currentPage = page;
+          document.getElementById('dataSource').textContent = '数据来源: 同花顺';
+          renderDzjyTable(dzjyData);
+          updatePagination(result.total || dzjyData.length);
+        } else {
+          tbody.innerHTML = '<tr><td colspan="10" class="loading-cell"><div style="color: var(--text-secondary);">暂无数据</div></td></tr>';
         }
       } catch (error) {
         console.error('加载大宗交易数据失败:', error);
@@ -1143,8 +1189,8 @@
       }).join('');
     }
 
-    function updatePagination() {
-      const totalPages = Math.max(1, Math.ceil(dzjyData.length / 50));
+    function updatePagination(total = null) {
+      const totalPages = total ? Math.max(1, Math.ceil(total / 50)) : Math.max(1, Math.ceil(dzjyData.length / 50));
       document.getElementById('currentPage').textContent = currentPage;
       document.getElementById('totalPages').textContent = totalPages;
 
@@ -1178,6 +1224,36 @@
         });
       });
 
+      // 时间周期切换时重新加载趋势数据
+      document.querySelectorAll('.time-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const period = btn.dataset.period || '24h';
+          syncTimeButtons(period);
+          currentPeriod = period;
+          
+          // 重新加载趋势数据
+          if (!isLoadingTrends) {
+            const response = await fetch(`/api/dzjy/trends?period=${period}`);
+            if (response.ok) {
+              const trends = await response.json();
+              if (trends.success && trends.data) {
+                trendData = {
+                  charts: {
+                    volume: {
+                      [periodMap[period]]: {
+                        labels: trends.data.map(d => d.date),
+                        values: trends.data.map(d => d.volume)
+                      }
+                    }
+                  }
+                };
+                applyPeriod(period);
+              }
+            }
+          }
+        });
+      });
+
       // 减少自动刷新频率，避免频繁请求
       setInterval(() => {
         if (!isLoadingTrends) {
@@ -1186,13 +1262,13 @@
             syncTimeButtons(currentPeriod);
           });
         }
-      }, 60000); // 改为60秒刷新一次
+      }, 300000); // 5分钟刷新一次
 
       setInterval(() => {
         if (!isLoadingDzjy) {
           loadDzjyData(currentPage);
         }
-      }, 120000); // 大宗交易数据2分钟刷新一次
+      }, 300000); // 大宗交易数据5分钟刷新一次
     });
   </script>
 </body>
