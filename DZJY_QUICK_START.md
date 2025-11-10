@@ -10,7 +10,25 @@
 - ✅ API端点已实现
 - ✅ 前端页面已更新
 
-## 🚀 快速启动（3步）
+## 🚀 快速启动（4步）
+
+### 步骤0: 安装依赖（首次运行必须）
+
+**方法1：使用依赖检查脚本（推荐）**
+```bash
+python check_dependencies.py
+```
+脚本会自动检查并提示安装缺失的依赖。
+
+**方法2：直接安装所有依赖**
+```bash
+pip install -r requirements.txt
+```
+
+如果遇到 `ModuleNotFoundError`，请确保：
+1. 使用正确的 Python 环境（如果使用虚拟环境，请先激活）
+2. 运行 `pip install -r requirements.txt` 安装所有依赖
+3. 主要依赖包括：`beautifulsoup4`, `requests`, `sqlalchemy`, `fastapi`, `python-dotenv` 等
 
 ### 步骤1: 启动Web服务
 
@@ -122,13 +140,108 @@ DATABASE_URL=sqlite:///./block_trade_dt.db
 
 ## 🐛 故障排查
 
-### 问题1: 无法抓取数据
+### 问题0: 端口被占用（错误 10048）
+
+**错误信息：** `[Errno 10048] error while attempting to bind on address ('0.0.0.0', 8080)`
+
+**原因：** 端口 8080 已被其他进程占用（通常是之前启动的服务器实例）
+
+**解决方案：**
+
+**方法1：关闭占用端口的进程（推荐）**
+```bash
+# 1. 查找占用 8080 端口的进程
+netstat -ano | findstr :8080
+
+# 2. 找到 PID（最后一列的数字），然后关闭进程
+# Windows:
+taskkill /PID <进程ID> /F
+# 例如：taskkill /PID 46520 /F
+```
+
+**方法2：使用其他端口**
+```bash
+# 使用 8081 端口启动
+uvicorn api.index:app --host 0.0.0.0 --port 8081
+```
+然后访问：`http://localhost:8081`
+
+**方法3：快速关闭所有 Python 进程（谨慎使用）**
+```bash
+taskkill /IM python.exe /F
+```
+
+### 问题1: ModuleNotFoundError（模块未找到）
+
+#### 错误1: `ModuleNotFoundError: No module named 'bs4'`
+
+**原因：** 缺少 `beautifulsoup4` 依赖包
+
+**解决方案：**
+```bash
+# 安装缺失的依赖
+pip install beautifulsoup4==4.12.2
+
+# 或者安装所有依赖
+pip install -r requirements.txt
+```
+
+#### 错误2: `ModuleNotFoundError: No module named 'api'`
+
+**原因：** 不在项目根目录下运行命令
+
+**解决方案：**
+1. 确认当前目录是项目根目录（应该能看到 `api`、`app`、`scripts` 等文件夹）
+2. 切换到项目根目录：
+   ```bash
+   # Windows PowerShell
+   cd "C:\Users\ruoha\Desktop\共享"
+   
+   # Windows CMD
+   cd /d "C:\Users\ruoha\Desktop\共享"
+   ```
+
+如果遇到其他 `ModuleNotFoundError`：
+
+1. **检查是否在正确的 Python 环境中**：
+   ```bash
+   python --version
+   which python  # Linux/Mac
+   where python  # Windows
+   ```
+
+2. **安装所有依赖**：
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **如果使用虚拟环境，确保已激活**：
+   ```bash
+   # 创建虚拟环境（如果还没有）
+   python -m venv venv
+   
+   # 激活虚拟环境
+   # Windows:
+   venv\Scripts\activate
+   # Linux/Mac:
+   source venv/bin/activate
+   
+   # 然后安装依赖
+   pip install -r requirements.txt
+   ```
+
+4. **验证安装**：
+   ```bash
+   python -c "from bs4 import BeautifulSoup; print('OK')"
+   ```
+
+### 问题2: 无法抓取数据
 
 1. 检查网络连接
 2. 检查目标网站是否可访问
 3. 查看调度器日志
 
-### 问题2: API返回空数据
+### 问题3: API返回空数据
 
 1. 确认调度器正在运行
 2. 检查数据库中是否有数据：
@@ -144,7 +257,7 @@ DATABASE_URL=sqlite:///./block_trade_dt.db
    print(f"数据库中有 {count} 条记录")
    ```
 
-### 问题3: 前端页面无数据
+### 问题4: 前端页面无数据
 
 1. 打开浏览器开发者工具（F12）
 2. 查看Console标签页的错误信息

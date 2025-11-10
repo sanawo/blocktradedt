@@ -45,6 +45,7 @@ class TrendsData(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     system_prompt: Optional[str] = None
+    context: Optional[str] = None  # 上下文信息
     conversation_history: Optional[List[Dict[str, str]]] = None
     enable_thinking: Optional[bool] = True  # 是否启用深度思考模式
     stream: Optional[bool] = False  # 是否使用流式输出

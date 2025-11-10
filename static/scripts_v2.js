@@ -311,11 +311,12 @@ async function performSearch() {
     
     const data = await response.json();
     const endTime = Date.now();
-    const searchTime = ((endTime - startTime) / 1000).toFixed(1);
+    // 使用API返回的search_time，如果没有则使用本地计算
+    const searchTime = data.search_time || ((endTime - startTime) / 1000).toFixed(2) + '秒';
     
-    searchTimeEl.textContent = searchTime + 's';
-    summaryEl.innerHTML = data.summary ? `<p>${data.summary}</p>` : '';
-    countEl.textContent = `共 ${data.results.length} 条结果`;
+    searchTimeEl.textContent = searchTime;
+    summaryEl.innerHTML = data.summary ? `<div class="ai-summary-content"><p>${data.summary}</p></div>` : '';
+    countEl.textContent = `共找到 ${data.total || data.results.length} 条结果`;
     
     resultsEl.innerHTML = data.results.map(r => {
       const l = r.listing;
@@ -489,8 +490,11 @@ async function loadLatestNews() {
     const response = await fetch('/api/news/latest?limit=6');
     const news = await response.json();
     
-    newsGrid.innerHTML = news.map(item => `
-      <div class="news-card" onclick="window.location.href='/news/${item.id}'">
+    newsGrid.innerHTML = news.map(item => {
+      // 使用新闻的URL，如果没有则使用默认链接
+      const newsUrl = item.url || `https://finance.sina.com.cn/stock/marketresearch/`;
+      return `
+      <div class="news-card" onclick="window.open('${newsUrl}', '_blank')" style="cursor: pointer;">
         <img class="lazy news-image" data-src="${item.image || 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&q=80'}" alt="${item.title}" />
         <div class="news-content">
           <div class="news-meta">
@@ -501,7 +505,8 @@ async function loadLatestNews() {
           <p class="news-summary">${item.summary}</p>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
     
     // 重新初始化懒加载
     initLazyLoad();

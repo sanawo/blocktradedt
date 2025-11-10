@@ -12,7 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 安全导入所有依赖
 try:
-    from fastapi import FastAPI, Request, HTTPException, Depends, status
+    from fastapi import FastAPI, Request, HTTPException, Depends, status, File, UploadFile
     from fastapi.responses import HTMLResponse, JSONResponse
     from fastapi.staticfiles import StaticFiles
     from fastapi.templating import Jinja2Templates
@@ -101,8 +101,22 @@ except Exception as e:
 zhipu_ai = None
 
 def get_zhipu_ai():
-    # Disabled to fix deployment issues
-    return None
+    """获取智谱AI客户端"""
+    global zhipu_ai
+    if zhipu_ai is None:
+        try:
+            api_key = os.getenv('ZHIPU_API_KEY')
+            if api_key:
+                from zhipuai import ZhipuAI
+                zhipu_ai = ZhipuAI(api_key=api_key)
+                logger.info("✅ 智谱AI客户端初始化成功")
+            else:
+                logger.warning("⚠️  ZHIPU_API_KEY未设置，AI功能将不可用")
+        except ImportError:
+            logger.warning("⚠️  zhipuai包未安装，AI功能将不可用")
+        except Exception as e:
+            logger.error(f"❌ 智谱AI初始化失败: {e}")
+    return zhipu_ai
 
 app = FastAPI(title="Block Trade DT", description="大宗交易数据检索平台")
 
@@ -295,6 +309,9 @@ async def get_user_profile(current_user: User = Depends(get_current_user)):
 @app.post("/api/search")
 async def search(request: SearchRequest, db: Session = Depends(get_db), current_user: Optional[User] = Depends(get_current_user_optional)):
     try:
+        import time
+        start_time = time.time()
+        
         # 获取检索器和LLM
         retriever_instance = get_retriever()
         llm_instance = get_llm()
@@ -302,39 +319,91 @@ async def search(request: SearchRequest, db: Session = Depends(get_db), current_
         if retriever_instance is None:
             raise HTTPException(status_code=503, detail="检索服务暂时不可用，请稍后重试")
         
-        # 执行搜索
-        results = retriever_instance.search(request.query)
+        # 执行搜索（支持top_k参数）
+        top_k = getattr(request, 'top_k', 10)
+        if hasattr(retriever_instance, 'search'):
+            # 检查search方法是否支持top_k参数
+            import inspect
+            sig = inspect.signature(retriever_instance.search)
+            if 'top_k' in sig.parameters:
+                results = retriever_instance.search(request.query, top_k=top_k)
+            else:
+                results = retriever_instance.search(request.query)
+                # 如果返回的结果超过top_k，进行截断
+                if isinstance(results, list) and len(results) > top_k:
+                    results = results[:top_k]
+        else:
+            results = []
+        
+        # 如果results是列表但元素格式不对，进行转换
+        if results and isinstance(results, list) and len(results) > 0:
+            # 检查结果格式，确保统一
+            formatted_results = []
+            for r in results:
+                if isinstance(r, dict):
+                    # 如果已经有listing字段，保持原样
+                    if 'listing' in r:
+                        formatted_results.append(r)
+                    else:
+                        # 否则包装为listing格式
+                        formatted_results.append({
+                            "score": r.get("score", 0.0),
+                            "listing": r
+                        })
+                else:
+                    formatted_results.append(r)
+            results = formatted_results
         
         # 生成摘要
         summary = ""
-        if llm_instance:
+        if llm_instance and llm_instance.client:
             try:
                 summary = llm_instance.generate_summary(request.query, results)
             except Exception as e:
-                print(f"生成摘要失败: {e}")
+                logger.warning(f"生成摘要失败: {e}")
                 summary = f"找到 {len(results)} 条相关结果"
         else:
-            summary = f"找到 {len(results)} 条相关结果"
+            # 生成本地摘要
+            if results:
+                summary = f"为您找到 {len(results)} 条与'{request.query}'相关的记录。"
+                if len(results) > 0:
+                    first_result = results[0]
+                    listing = first_result.get("listing", first_result) if isinstance(first_result, dict) else first_result
+                    if isinstance(listing, dict):
+                        title = listing.get("title", "")
+                        if title:
+                            summary += f" 最相关的结果：{title}。"
+            else:
+                summary = f"未找到与'{request.query}'相关的记录。"
+        
+        # 计算搜索耗时
+        search_time = time.time() - start_time
         
         # 记录搜索历史（如果用户已登录）
         if current_user:
-            search_history = SearchHistory(
-                user_id=current_user.id,
-                query=request.query,
-                results_count=len(results)
-            )
-            db.add(search_history)
-            db.commit()
+            try:
+                search_history = SearchHistory(
+                    user_id=current_user.id,
+                    query=request.query,
+                    results_count=len(results)
+                )
+                db.add(search_history)
+                db.commit()
+            except Exception as e:
+                logger.warning(f"记录搜索历史失败: {e}")
         
         return {
             "query": request.query,
             "results": results,
             "summary": summary,
+            "total": len(results),
+            "search_time": f"{search_time:.2f}秒",
             "timestamp": datetime.now().isoformat()
         }
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"搜索失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/news/latest")
@@ -392,22 +461,53 @@ async def api_news_latest(limit: int = 6):
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_with_ai(chat_request: ChatRequest):
     try:
+        # 优先使用LLM实例
+        llm_instance = get_llm()
+        if llm_instance and llm_instance.client:
+            # 使用LLM的chat方法
+            system_prompt = chat_request.system_prompt or "你是一个专业的金融分析师，专门分析大宗交易数据。请用中文回答，语言要专业、准确。请始终使用中文回复，不要使用英文。"
+            response = llm_instance.chat(
+                message=chat_request.message,
+                system_prompt=system_prompt,
+                context=chat_request.context if hasattr(chat_request, 'context') else None
+            )
+            return ChatResponse(response=response, timestamp=datetime.now().isoformat(), success=True)
+        
+        # 回退到智谱AI客户端
         ai_client = get_zhipu_ai()
         if ai_client is None:
             return ChatResponse(
-                response="抱歉，AI服务暂时不可用",
+                response="抱歉，AI服务暂时不可用，请检查API密钥配置",
                 timestamp=datetime.now().isoformat(),
                 success=False
             )
         
-        response = ai_client.chat(
-            user_message=chat_request.message,
-            system_prompt=chat_request.system_prompt,
-            conversation_history=chat_request.conversation_history
+        # 使用智谱AI直接调用
+        system_prompt = chat_request.system_prompt or "你是一个专业的金融分析师，专门分析大宗交易数据。请用中文回答，语言要专业、准确。请始终使用中文回复，不要使用英文。"
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": chat_request.message}
+        ]
+        
+        response = ai_client.chat.completions.create(
+            model="glm-4-flash",
+            messages=messages,
+            temperature=0.7,
+            max_tokens=1000
         )
-        return ChatResponse(response=response, timestamp=datetime.now().isoformat(), success=True)
+        
+        return ChatResponse(
+            response=response.choices[0].message.content,
+            timestamp=datetime.now().isoformat(),
+            success=True
+        )
     except Exception as e:
-        return ChatResponse(response=f"抱歉，AI服务暂时不可用: {str(e)}", timestamp=datetime.now().isoformat(), success=False)
+        logger.error(f"AI对话失败: {e}")
+        return ChatResponse(
+            response=f"抱歉，AI服务暂时不可用: {str(e)}",
+            timestamp=datetime.now().isoformat(),
+            success=False
+        )
 
 @app.get("/api/trends/data")
 async def get_trends_data():
@@ -794,6 +894,68 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
         "total": len(selected_news) * 10,
         "has_more": page * limit < len(selected_news) * 10
     }
+
+# 研报摘要路由
+@app.get("/report", response_class=HTMLResponse)
+async def report_page(request: Request):
+    """研报摘要页面"""
+    if templates is None:
+        return HTMLResponse("<h1>研报摘要</h1><p>模板系统未加载</p>")
+    return templates.TemplateResponse("report_summarizer.html", {"request": request})
+
+@app.post("/api/report/summarize")
+async def summarize_report(
+    report_text: Optional[str] = None,
+    file: Optional[UploadFile] = File(None)
+):
+    """
+    生成研报摘要
+    
+    支持：文本上传或文件上传（5000字以内，8秒内完成）
+    """
+    try:
+        from app.report_summarizer import ReportSummarizer
+        
+        # 初始化研报摘要器
+        summarizer = ReportSummarizer()
+        
+        # 处理文件上传
+        if file:
+            content = await file.read()
+            try:
+                report_text = content.decode('utf-8')
+            except UnicodeDecodeError:
+                # 尝试其他编码
+                try:
+                    report_text = content.decode('gbk')
+                except:
+                    raise HTTPException(status_code=400, detail="文件编码不支持，请使用UTF-8编码")
+        
+        if not report_text:
+            raise HTTPException(status_code=400, detail="未提供研报文本")
+        
+        # 生成摘要
+        start_time = datetime.now()
+        summary = summarizer.summarize(report_text)
+        end_time = datetime.now()
+        
+        processing_time = (end_time - start_time).total_seconds()
+        
+        # 格式化输出
+        formatted = summarizer.format_summary(summary)
+        
+        return {
+            "success": True,
+            "processing_time": f"{processing_time:.2f}秒",
+            "summary": formatted,
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"生成摘要失败: {e}")
+        raise HTTPException(status_code=500, detail=f"生成摘要失败: {str(e)}")
 
 # Vercel适配
 def handler(request):

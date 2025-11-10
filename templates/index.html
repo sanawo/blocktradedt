@@ -804,11 +804,12 @@
         
         const data = await resp.json();
         const endTime = Date.now();
-        const searchTime = ((endTime - startTime) / 1000).toFixed(1);
+        // 使用API返回的search_time，如果没有则使用本地计算
+        const searchTime = data.search_time || ((endTime - startTime) / 1000).toFixed(2) + '秒';
         
-        searchTimeEl.textContent = searchTime + 's';
+        searchTimeEl.textContent = searchTime;
         summaryEl.innerHTML = data.summary ? `<div class="summary-content">${data.summary}</div>` : '';
-        countEl.textContent = `共 ${data.results.length} 条结果`;
+        countEl.textContent = `共找到 ${data.total || data.results.length} 条结果`;
         resultsEl.innerHTML = '';
         
         data.results.forEach((r) => {

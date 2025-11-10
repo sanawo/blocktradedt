@@ -15,8 +15,16 @@ class LLM:
         self.api_key = api_key or os.getenv('ZHIPU_API_KEY')
         self.client = None
         
-        # Disabled to fix deployment issues
-        self.client = None
+        # 初始化智谱AI客户端
+        if self.api_key:
+            try:
+                from zhipuai import ZhipuAI
+                self.client = ZhipuAI(api_key=self.api_key)
+                print("✅ 智谱AI客户端初始化成功")
+            except ImportError:
+                print("⚠️  zhipuai包未安装，AI功能将不可用")
+            except Exception as e:
+                print(f"❌ 智谱AI初始化失败: {e}")
     
     def generate_summary(self, query: str, results: List[Dict[str, Any]]) -> str:
         """生成搜索结果摘要"""
@@ -152,6 +160,85 @@ class LLM:
         except Exception as e:
             print(f"AI chat failed: {e}")
             return f"抱歉，AI助手遇到了问题：{str(e)}"
+    
+    def summarize_report(self, report_text: str) -> Optional[Dict[str, Any]]:
+        """
+        使用AI生成研报摘要
+        
+        Args:
+            report_text: 研报文本内容
+            
+        Returns:
+            结构化摘要字典，如果失败则返回None
+        """
+        if not self.client:
+            return None
+        
+        try:
+            # 限制文本长度
+            if len(report_text) > 5000:
+                report_text = report_text[:5000] + "..."
+            
+            prompt = f"""请分析以下行业研报，并提取以下结构化信息：
+
+1. 标题：提取研报标题
+2. 核心观点：提取3-5条主要观点和建议
+3. 数据支撑：提取关键数据和数字（百分比、数量、价格等）
+4. 趋势判断：提取市场趋势预测和判断
+5. 关键发现：提取重要发现和创新点
+6. 风险分析：提取风险提示和预警信息
+7. 投资建议：提取投资建议和操作指引
+
+研报内容：
+{report_text}
+
+请以JSON格式返回，格式如下：
+{{
+    "title": "标题",
+    "core_viewpoints": ["观点1", "观点2", ...],
+    "data_support": [{{"value": "数值", "type": "类型"}}, ...],
+    "trend_judgment": "趋势判断文本",
+    "key_findings": ["发现1", "发现2", ...],
+    "risk_analysis": ["风险1", "风险2", ...],
+    "recommendations": ["建议1", "建议2", ...],
+    "confidence": 0.85
+}}"""
+
+            response = self.client.chat.completions.create(
+                model="glm-4-flash",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "你是一个专业的金融分析师，擅长分析行业研报并提取结构化信息。请用中文回答，返回JSON格式。"
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.3,
+                max_tokens=2000
+            )
+            
+            # 解析JSON响应
+            import json
+            import re
+            
+            content = response.choices[0].message.content
+            
+            # 尝试提取JSON部分
+            json_match = re.search(r'\{.*\}', content, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+                result = json.loads(json_str)
+                return result
+            else:
+                # 如果无法解析JSON，返回None，让系统使用本地方法
+                return None
+                
+        except Exception as e:
+            print(f"AI研报摘要生成失败: {e}")
+            return None
 
 
 
