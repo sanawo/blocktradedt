@@ -21,14 +21,34 @@ from app.config import Config
 import jwt
 from datetime import datetime, timedelta
 from typing import Optional
+import logging
+
+# 设置日志（必须在其他初始化之前）
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.info("🚀 正在初始化应用...")
 
 # 数据库配置 - 使用内存数据库适配Vercel
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./block_trade_dt.db")
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# 创建数据库表
-Base.metadata.create_all(bind=engine)
+try:
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    # 创建数据库表
+    Base.metadata.create_all(bind=engine)
+    logger.info("✅ 数据库初始化成功")
+except Exception as e:
+    logger.error(f"❌ 数据库初始化失败: {e}")
+    # 使用内存数据库作为后备
+    try:
+        engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        Base.metadata.create_all(bind=engine)
+        logger.info("✅ 使用内存数据库作为后备")
+    except Exception as e2:
+        logger.error(f"❌ 内存数据库初始化也失败: {e2}")
+        # 最后的后备方案：创建一个基本的engine
+        engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # 初始化智谱AI（延迟初始化以避免启动时错误）
 zhipu_ai = None
@@ -38,11 +58,6 @@ def get_zhipu_ai():
     return None
 
 app = FastAPI(title="Block Trade DT", description="大宗交易数据检索平台")
-
-# 静态文件和模板
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 try:
     # 检查目录是否存在

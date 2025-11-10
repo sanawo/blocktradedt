@@ -34,7 +34,14 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD sh -c "curl -f http://localhost:${PORT:-8000}/health || exit 1"
 
 # 启动命令 - 使用环境变量 PORT（Zeabur 会自动设置）
-# 添加 --log-level info 以便查看详细日志
-# 添加启动前检查，确保应用能正常启动
-CMD sh -c "echo '🚀 Starting application...' && echo 'PORT=${PORT:-8000}' && python -m uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info --access-log"
+# 添加详细的启动日志和错误处理
+CMD sh -c "echo '🚀 Starting application...' && \
+           echo '📋 Environment:' && \
+           echo '  PORT=${PORT:-8000}' && \
+           echo '  PYTHONPATH=${PYTHONPATH:-/app}' && \
+           echo '  Working directory: $(pwd)' && \
+           echo '📁 Checking files...' && \
+           ls -la /app/api/index.py && \
+           echo '✅ Starting uvicorn...' && \
+           python -m uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info --access-log --timeout-keep-alive 30"
 
