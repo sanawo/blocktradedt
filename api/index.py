@@ -1,32 +1,79 @@
-from fastapi import FastAPI, Request, HTTPException, Depends, status
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session
-from sqlalchemy.orm import sessionmaker
 import sys
 import os
-
-# 添加项目根目录到Python路径
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from app.models import Base, User, SearchHistory
-from app.schemas import UserCreate, UserLogin, SearchRequest, ChatRequest, ChatResponse
-from app.retriever import Retriever
-from app.llm import LLM
-# from app.zhipu_ai import ZhipuAI  # Removed to fix deployment issues
-from app.config import Config
-import jwt
-from datetime import datetime, timedelta
-from typing import Optional
 import logging
 
 # 设置日志（必须在其他初始化之前）
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.info("🚀 正在初始化应用...")
+
+# 添加项目根目录到Python路径
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# 安全导入所有依赖
+try:
+    from fastapi import FastAPI, Request, HTTPException, Depends, status
+    from fastapi.responses import HTMLResponse, JSONResponse
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.templating import Jinja2Templates
+    from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+    logger.info("✅ FastAPI 导入成功")
+except ImportError as e:
+    logger.error(f"❌ FastAPI 导入失败: {e}")
+    raise
+
+try:
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session, sessionmaker
+    logger.info("✅ SQLAlchemy 导入成功")
+except ImportError as e:
+    logger.error(f"❌ SQLAlchemy 导入失败: {e}")
+    raise
+
+try:
+    from app.models import Base, User, SearchHistory
+    logger.info("✅ Models 导入成功")
+except ImportError as e:
+    logger.error(f"❌ Models 导入失败: {e}")
+    raise
+
+try:
+    from app.schemas import UserCreate, UserLogin, SearchRequest, ChatRequest, ChatResponse
+    logger.info("✅ Schemas 导入成功")
+except ImportError as e:
+    logger.error(f"❌ Schemas 导入失败: {e}")
+    raise
+
+try:
+    from app.retriever import Retriever
+    logger.info("✅ Retriever 导入成功")
+except ImportError as e:
+    logger.error(f"❌ Retriever 导入失败: {e}")
+    Retriever = None
+
+try:
+    from app.llm import LLM
+    logger.info("✅ LLM 导入成功")
+except ImportError as e:
+    logger.error(f"❌ LLM 导入失败: {e}")
+    LLM = None
+
+try:
+    from app.config import Config
+    logger.info("✅ Config 导入成功")
+except ImportError as e:
+    logger.error(f"❌ Config 导入失败: {e}")
+    raise
+
+try:
+    import jwt
+    logger.info("✅ PyJWT 导入成功")
+except ImportError as e:
+    logger.error(f"❌ PyJWT 导入失败: {e}")
+    raise
+
+from datetime import datetime, timedelta
+from typing import Optional
 
 # 数据库配置 - 使用内存数据库适配Vercel
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./block_trade_dt.db")
@@ -87,20 +134,28 @@ llm = None
 def get_retriever():
     global retriever
     if retriever is None:
+        if Retriever is None:
+            logger.warning("⚠️  Retriever类不可用")
+            return None
         try:
             retriever = Retriever()
+            logger.info("✅ Retriever初始化成功")
         except Exception as e:
-            print(f"Retriever初始化失败: {e}")
+            logger.error(f"❌ Retriever初始化失败: {e}")
             retriever = None
     return retriever
 
 def get_llm():
     global llm
     if llm is None:
+        if LLM is None:
+            logger.warning("⚠️  LLM类不可用")
+            return None
         try:
             llm = LLM()
+            logger.info("✅ LLM初始化成功")
         except Exception as e:
-            print(f"LLM初始化失败: {e}")
+            logger.error(f"❌ LLM初始化失败: {e}")
             llm = None
     return llm
 
@@ -144,7 +199,31 @@ def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials
 # 健康检查端点
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy", "service": "Block Trade DT"}
+    """健康检查端点，用于验证服务是否正常运行"""
+    try:
+        # 检查数据库连接
+        db_status = "ok"
+        try:
+            db = SessionLocal()
+            db.close()
+        except Exception as e:
+            db_status = f"error: {str(e)}"
+        
+        return {
+            "status": "healthy",
+            "service": "Block Trade DT",
+            "database": db_status,
+            "retriever_available": Retriever is not None,
+            "llm_available": LLM is not None,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"健康检查失败: {e}")
+        return {
+            "status": "degraded",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 # 主页路由
 @app.get("/", response_class=HTMLResponse)
@@ -520,3 +599,12 @@ async def api_news(page: int = 1, category: str = "all", limit: int = 20):
 # Vercel适配
 def handler(request):
     return app(request.scope, request.receive, request.send)
+
+# 应用启动完成日志
+logger.info("=" * 50)
+logger.info("✅ 应用初始化完成！")
+logger.info(f"📊 数据库状态: {'已初始化' if 'engine' in globals() else '未初始化'}")
+logger.info(f"🔍 Retriever可用: {Retriever is not None}")
+logger.info(f"🤖 LLM可用: {LLM is not None}")
+logger.info(f"📁 模板系统: {'已加载' if 'templates' in globals() and templates is not None else '未加载'}")
+logger.info("=" * 50)

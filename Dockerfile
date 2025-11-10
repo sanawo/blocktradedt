@@ -41,7 +41,11 @@ CMD sh -c "echo '🚀 Starting application...' && \
            echo '  PYTHONPATH=${PYTHONPATH:-/app}' && \
            echo '  Working directory: $(pwd)' && \
            echo '📁 Checking files...' && \
-           ls -la /app/api/index.py && \
+           ls -la /app/api/index.py 2>&1 && \
+           echo '📦 Checking Python imports...' && \
+           python -c 'import sys; sys.path.insert(0, \"/app\"); from api.index import app; print(\"✅ App imported successfully\")' 2>&1 && \
            echo '✅ Starting uvicorn...' && \
-           python -m uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info --access-log --timeout-keep-alive 30"
+           python -m uvicorn api.index:app --host 0.0.0.0 --port ${PORT:-8000} --log-level info --access-log --timeout-keep-alive 30 || \
+           (echo '❌ Uvicorn failed, trying alternative...' && \
+            python -c 'import uvicorn; from api.index import app; uvicorn.run(app, host=\"0.0.0.0\", port=int(\"${PORT:-8000}\"), log_level=\"info\")')"
 
