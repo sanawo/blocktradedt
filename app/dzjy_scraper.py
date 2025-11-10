@@ -284,12 +284,143 @@ class DzjyScraper:
         
         return parsed
     
+    def fetch_via_html(self, date: Optional[str] = None) -> List[Dict[str, Any]]:
+        """直接解析HTML页面获取数据"""
+        try:
+            url = self.dzjy_url
+            if date:
+                url += f"?date={date}"
+            
+            response = self._retry_request(
+                self.session.get,
+                url,
+                timeout=30
+            )
+            response.raise_for_status()
+            
+            # 解析HTML
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # 查找表格
+            tables = soup.find_all('table')
+            if not tables:
+                logger.warning("未找到表格")
+                return []
+            
+            # 查找包含数据的表格（通常tbody中有多行数据）
+            data_list = []
+            for table in tables:
+                tbody = table.find('tbody')
+                if not tbody:
+                    continue
+                
+                rows = tbody.find_all('tr')
+                if len(rows) < 2:  # 至少要有数据行
+                    continue
+                
+                # 解析每一行
+                for row in rows:
+                    cells = row.find_all('td')
+                    if len(cells) < 8:  # 至少需要8列数据
+                        continue
+                    
+                    try:
+                        # 解析日期
+                        date_str = cells[1].get_text(strip=True)  # 第2列是日期
+                        try:
+                            trade_time = datetime.strptime(date_str, '%Y-%m-%d')
+                        except:
+                            trade_time = datetime.now()
+                        
+                        # 解析股票代码和名称（第3列和第4列）
+                        code_link = cells[2].find('a')
+                        name_link = cells[3].find('a')
+                        stock_code = code_link.get_text(strip=True) if code_link else cells[2].get_text(strip=True)
+                        stock_name = name_link.get_text(strip=True) if name_link else cells[3].get_text(strip=True)
+                        
+                        # 解析价格（第5列和第6列：收盘价和成交价）
+                        close_price_str = cells[4].get_text(strip=True)
+                        trade_price_str = cells[5].get_text(strip=True)
+                        close_price = float(close_price_str.replace(',', '')) if close_price_str else 0.0
+                        trade_price = float(trade_price_str.replace(',', '')) if trade_price_str else 0.0
+                        
+                        # 解析成交量（第7列，单位：万股）
+                        volume_str = cells[6].get_text(strip=True).replace(',', '').replace('万股', '').replace('万', '')
+                        volume = float(volume_str) if volume_str else 0.0
+                        
+                        # 解析折价率（第8列）
+                        discount_str = cells[7].get_text(strip=True).replace('%', '').replace(',', '')
+                        discount_rate = float(discount_str) if discount_str else 0.0
+                        
+                        # 计算成交金额（成交价 * 成交量）
+                        amount = trade_price * volume if trade_price and volume else 0.0
+                        
+                        # 解析营业部（第9列和第10列）
+                        buy_broker = cells[8].get_text(strip=True) if len(cells) > 8 else ''
+                        sell_broker = cells[9].get_text(strip=True) if len(cells) > 9 else ''
+                        
+                        # 构建记录
+                        record = {
+                            'trade_time': trade_time,
+                            'stock_code': stock_code,
+                            'stock_name': stock_name,
+                            'volume': volume,
+                            'amount': amount,
+                            'price': trade_price,
+                            'close_price': close_price,
+                            'discount_rate': discount_rate,
+                            'buy_broker': buy_broker,
+                            'sell_broker': sell_broker,
+                            'source_raw': json.dumps({
+                                'date': date_str,
+                                'code': stock_code,
+                                'name': stock_name,
+                                'close_price': close_price_str,
+                                'trade_price': trade_price_str,
+                                'volume': volume_str,
+                                'discount_rate': discount_str,
+                                'buy_broker': buy_broker,
+                                'sell_broker': sell_broker
+                            }, ensure_ascii=False)
+                        }
+                        
+                        data_list.append(record)
+                        
+                    except Exception as e:
+                        logger.warning(f"解析表格行失败: {e}")
+                        continue
+                
+                # 如果找到数据，就使用这个表格
+                if data_list:
+                    break
+            
+            if data_list:
+                logger.info(f"✅ 通过HTML解析获取到 {len(data_list)} 条记录")
+            else:
+                logger.warning("⚠️ HTML解析未找到数据")
+            
+            return data_list
+            
+        except Exception as e:
+            logger.error(f"HTML解析失败: {e}")
+            return []
+    
     def fetch_data(self, date: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         主要的数据获取方法
-        优先使用JSON API，失败则使用Playwright
+        优先使用HTML解析（最快），然后尝试JSON API，最后使用Playwright
         """
-        # 1. 尝试查找JSON API
+        # 1. 优先使用HTML解析（最快且不需要额外依赖）
+        try:
+            logger.info("尝试使用HTML解析抓取数据...")
+            data = self.fetch_via_html(date)
+            if data:
+                logger.info(f"✅ 通过HTML解析获取到 {len(data)} 条记录")
+                return data
+        except Exception as e:
+            logger.warning(f"HTML解析失败: {e}")
+        
+        # 2. 尝试查找JSON API
         api_url = self.find_json_api()
         if api_url:
             data = self.fetch_via_json_api(api_url, date)
@@ -297,7 +428,7 @@ class DzjyScraper:
                 logger.info(f"✅ 通过JSON API获取到 {len(data)} 条记录")
                 return data
         
-        # 2. 如果JSON API不可用，尝试使用Playwright
+        # 3. 如果JSON API不可用，尝试使用Playwright
         if PLAYWRIGHT_AVAILABLE:
             try:
                 logger.info("尝试使用Playwright抓取数据...")
@@ -312,7 +443,7 @@ class DzjyScraper:
             except Exception as e:
                 logger.warning(f"Playwright抓取失败: {e}")
         
-        # 3. 如果都失败，返回空列表
+        # 4. 如果都失败，返回空列表
         logger.warning("⚠️ 所有抓取方式都失败，返回空数据")
         return []
 
