@@ -160,7 +160,7 @@ class LLM:
         except Exception as e:
             print(f"AI chat failed: {e}")
             return f"抱歉，AI助手遇到了问题：{str(e)}"
-    
+
     def summarize_report(self, report_text: str) -> Optional[Dict[str, Any]]:
         """
         使用AI生成研报摘要

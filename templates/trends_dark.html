@@ -1123,7 +1123,7 @@
         
         const result = await response.json();
         
-        console.log(`数据加载完成（耗时${loadTime}ms）`);
+          console.log(`数据加载完成（耗时${loadTime}ms）`);
 
         if (result.success && result.data && result.data.length > 0) {
           // 转换数据格式以匹配表格
@@ -1142,13 +1142,13 @@
               sell_broker: '--'
             };
           });
-          
+
           currentPage = page;
           document.getElementById('dataSource').textContent = '数据来源: 同花顺';
-          renderDzjyTable(dzjyData);
+            renderDzjyTable(dzjyData);
           updatePagination(result.total || dzjyData.length);
-        } else {
-          tbody.innerHTML = '<tr><td colspan="10" class="loading-cell"><div style="color: var(--text-secondary);">暂无数据</div></td></tr>';
+          } else {
+            tbody.innerHTML = '<tr><td colspan="10" class="loading-cell"><div style="color: var(--text-secondary);">暂无数据</div></td></tr>';
         }
       } catch (error) {
         console.error('加载大宗交易数据失败:', error);

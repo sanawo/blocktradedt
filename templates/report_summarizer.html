@@ -516,6 +516,15 @@
             // 摘要内容
             let html = '';
 
+            // 显示标题
+            if (summary.title) {
+                html += `
+                    <div class="result-section">
+                        <h2 style="color: #667eea; margin-bottom: 20px;">${summary.title}</h2>
+                    </div>
+                `;
+            }
+
             if (summary.core_viewpoints && summary.core_viewpoints.length > 0) {
                 html += `
                     <div class="result-section">
@@ -532,9 +541,13 @@
                     <div class="result-section">
                         <h3>📊 数据支撑</h3>
                         <ul>
-                            ${summary.data_support.slice(0, 10).map(item => 
-                                `<li>${item.value} ${item.type}</li>`
-                            ).join('')}
+                            ${summary.data_support.slice(0, 10).map(item => {
+                                if (typeof item === 'object' && item.value) {
+                                    return `<li>${item.value} ${item.type || ''} ${item.context ? `(${item.context})` : ''}</li>`;
+                                } else {
+                                    return `<li>${item}</li>`;
+                                }
+                            }).join('')}
                         </ul>
                     </div>
                 `;

@@ -12,7 +12,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 安全导入所有依赖
 try:
-    from fastapi import FastAPI, Request, HTTPException, Depends, status, File, UploadFile
+    from fastapi import FastAPI, Request, HTTPException, Depends, status, File, UploadFile, Body
     from fastapi.responses import HTMLResponse, JSONResponse
     from fastapi.staticfiles import StaticFiles
     from fastapi.templating import Jinja2Templates
@@ -38,35 +38,35 @@ except ImportError as e:
     raise
 
 try:
-    from app.schemas import UserCreate, UserLogin, SearchRequest, ChatRequest, ChatResponse
+from app.schemas import UserCreate, UserLogin, SearchRequest, ChatRequest, ChatResponse
     logger.info("✅ Schemas 导入成功")
 except ImportError as e:
     logger.error(f"❌ Schemas 导入失败: {e}")
     raise
 
 try:
-    from app.retriever import Retriever
+from app.retriever import Retriever
     logger.info("✅ Retriever 导入成功")
 except ImportError as e:
     logger.error(f"❌ Retriever 导入失败: {e}")
     Retriever = None
 
 try:
-    from app.llm import LLM
+from app.llm import LLM
     logger.info("✅ LLM 导入成功")
 except ImportError as e:
     logger.error(f"❌ LLM 导入失败: {e}")
     LLM = None
 
 try:
-    from app.config import Config
+from app.config import Config
     logger.info("✅ Config 导入成功")
 except ImportError as e:
     logger.error(f"❌ Config 导入失败: {e}")
     raise
 
 try:
-    import jwt
+import jwt
     logger.info("✅ PyJWT 导入成功")
 except ImportError as e:
     logger.error(f"❌ PyJWT 导入失败: {e}")
@@ -78,8 +78,8 @@ from typing import Optional
 # 数据库配置 - 使用内存数据库适配Vercel
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./block_trade_dt.db")
 try:
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     # 创建数据库表（包括DzjyTrade表）
     Base.metadata.create_all(bind=engine)
     logger.info("✅ 数据库初始化成功，所有表已创建")
@@ -89,7 +89,7 @@ except Exception as e:
     try:
         engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-        Base.metadata.create_all(bind=engine)
+Base.metadata.create_all(bind=engine)
         logger.info("✅ 使用内存数据库作为后备")
     except Exception as e2:
         logger.error(f"❌ 内存数据库初始化也失败: {e2}")
@@ -123,13 +123,13 @@ app = FastAPI(title="Block Trade DT", description="大宗交易数据检索平�
 try:
     # 检查目录是否存在
     if os.path.exists("static"):
-        app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="static"), name="static")
         logger.info("✅ 静态文件目录已挂载")
     else:
         logger.warning("⚠️  静态文件目录不存在")
     
     if os.path.exists("templates"):
-        templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory="templates")
         logger.info("✅ 模板目录已加载")
     else:
         logger.warning("⚠️  模板目录不存在")
@@ -328,7 +328,7 @@ async def search(request: SearchRequest, db: Session = Depends(get_db), current_
             if 'top_k' in sig.parameters:
                 results = retriever_instance.search(request.query, top_k=top_k)
             else:
-                results = retriever_instance.search(request.query)
+        results = retriever_instance.search(request.query)
                 # 如果返回的结果超过top_k，进行截断
                 if isinstance(results, list) and len(results) > top_k:
                     results = results[:top_k]
@@ -382,13 +382,13 @@ async def search(request: SearchRequest, db: Session = Depends(get_db), current_
         # 记录搜索历史（如果用户已登录）
         if current_user:
             try:
-                search_history = SearchHistory(
-                    user_id=current_user.id,
-                    query=request.query,
-                    results_count=len(results)
-                )
-                db.add(search_history)
-                db.commit()
+            search_history = SearchHistory(
+                user_id=current_user.id,
+                query=request.query,
+                results_count=len(results)
+            )
+            db.add(search_history)
+            db.commit()
             except Exception as e:
                 logger.warning(f"记录搜索历史失败: {e}")
         
@@ -759,7 +759,7 @@ async def get_dzjy_list(db: Session = Depends(get_db), page: int = 1, size: int 
             "size": size,
             "total": 0,
             "data": []
-        }
+    }
 
 @app.get("/api/news")
 async def api_news(page: int = 1, category: str = "all", limit: int = 20):
@@ -905,7 +905,7 @@ async def report_page(request: Request):
 
 @app.post("/api/report/summarize")
 async def summarize_report(
-    report_text: Optional[str] = None,
+    request: Request,
     file: Optional[UploadFile] = File(None)
 ):
     """
@@ -919,6 +919,8 @@ async def summarize_report(
         # 初始化研报摘要器
         summarizer = ReportSummarizer()
         
+        report_text = None
+        
         # 处理文件上传
         if file:
             content = await file.read()
@@ -930,6 +932,15 @@ async def summarize_report(
                     report_text = content.decode('gbk')
                 except:
                     raise HTTPException(status_code=400, detail="文件编码不支持，请使用UTF-8编码")
+        else:
+            # 处理JSON请求体
+            try:
+                body = await request.json()
+                report_text = body.get('report_text')
+            except Exception:
+                # 如果不是JSON请求，尝试从表单数据读取
+                form = await request.form()
+                report_text = form.get('report_text')
         
         if not report_text:
             raise HTTPException(status_code=400, detail="未提供研报文本")
